@@ -64,18 +64,18 @@ def fetch_clean_google_news(company_name, limit=20):
     return articles
 
 # Example usage
-if __name__ == "__main__":
-    company = "TCS"
+# if __name__ == "__main__":
+#     company = "TCS"
 
-    reddit_posts = fetch_reddit_posts(company)
-    news_articles = fetch_clean_google_news(company)
-    reddit_scores = [post['sentiment_score'] for post in reddit_posts]
-    news_scores = [article['sentiment_score'] for article in news_articles]
+#     reddit_posts = fetch_reddit_posts(company)
+#     news_articles = fetch_clean_google_news(company)
+#     reddit_scores = [post['sentiment_score'] for post in reddit_posts]
+#     news_scores = [article['sentiment_score'] for article in news_articles]
 
-    reddit_avg = sum(reddit_scores) / len(reddit_scores) if reddit_scores else 0
-    news_avg = sum(news_scores) / len(news_scores) if news_scores else 0
+#     reddit_avg = sum(reddit_scores) / len(reddit_scores) if reddit_scores else 0
+#     news_avg = sum(news_scores) / len(news_scores) if news_scores else 0
 
-    total_avg = (reddit_avg + news_avg) / 2 if reddit_scores and news_scores else 0
-    print(f"Average Sentiment Score for {company}: {total_avg:.2f}")
+#     total_avg = (reddit_avg + news_avg) / 2 if reddit_scores and news_scores else 0
+#     print(f"Average Sentiment Score for {company}: {total_avg:.2f}")
 
 

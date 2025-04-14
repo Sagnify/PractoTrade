@@ -1,0 +1,13 @@
+# Ignore .env file
+.env
+
+# Ignore other common files
+*.pyc
+__pycache__/
+*.log
+*.sqlite3
+*.db
+
+# Ignore Django migrations
+**/migrations/*.py
+**/migrations/*.pyc

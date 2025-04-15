@@ -3,14 +3,16 @@ from .scripts import fetch_analyze as fa
 from .models import CompanySentiment
 from django.http import JsonResponse
 from django.utils.timezone import now
+from datetime import datetime
 
 
 def sentiment_analysis(request):
-    company = "TCS"
+    company = "TCS.NS"
 
     # Fetch Reddit and News sentiments
     reddit_posts = fa.fetch_reddit_posts(company)
     news_articles = fa.fetch_clean_google_news(company)
+    stock_data = fa.get_stock_data_on_date(company, datetime.now().strftime("%Y-%m-%d"))
 
     # Calculate average scores
     reddit_scores = [post['sentiment_score'] for post in reddit_posts]
@@ -35,6 +37,7 @@ def sentiment_analysis(request):
             "negative" if total_avg <= -0.05 else
             "neutral"
         ),
+        stock_data = stock_data,
         timestamp=now()
     )
 
@@ -51,6 +54,7 @@ def sentiment_analysis(request):
             "negative" if total_avg <= -0.05 else
             "neutral"
         ),
+        'stock_data' : stock_data,
         'status': 'Saved to database'
     })
 
@@ -63,9 +67,9 @@ def home(request):
     return HttpResponse("Welcome to the Stock Sentiment Analysis API!")
 
 # tasks.py
-from celery import Celery
+# from celery import Celery
 
-app = Celery('tasks', broker='redis://localhost:6379/0')
+# app = Celery('tasks', broker='redis://localhost:6379/0')
 
 # @app.task
 # def fetch_company_data(ticker):

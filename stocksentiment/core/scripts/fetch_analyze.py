@@ -1,7 +1,9 @@
 import datetime
+from datetime import datetime, timedelta
 import requests
 import feedparser
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+import yfinance as yf
 
 analyzer = SentimentIntensityAnalyzer()
 
@@ -63,8 +65,47 @@ def fetch_clean_google_news(company_name, limit=20):
 
     return articles
 
+def get_stock_data_on_date(ticker_symbol, date_str):
+    """
+    Fetches stock data for a specific ticker on a particular date.
+    
+    Args:
+        ticker_symbol (str): e.g., "TCS.NS"
+        date_str (str): Date in "YYYY-MM-DD" format
+
+    Returns:
+        dict: Stock data including open, high, low, close, volume
+    """
+    try:
+        date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        next_day = date + timedelta(days=1)
+        
+        stock = yf.Ticker(ticker_symbol)
+        hist = stock.history(start=date_str, end=next_day.isoformat())
+
+        if hist.empty:
+            return {"error": f"No data found for {ticker_symbol} on {date_str}"}
+
+        row = hist.iloc[0]
+        return {
+            "date": date_str,
+            "ticker": ticker_symbol,
+            "open": round(row["Open"], 2),
+            "high": round(row["High"], 2),
+            "low": round(row["Low"], 2),
+            "close": round(row["Close"], 2),
+            "adj_close": round(row["Close"], 2),  # or row["Adj Close"] if needed
+            "volume": int(row["Volume"])
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
 # Example usage
 # if __name__ == "__main__":
+#     data = get_stock_data_on_date("TCS.NS", "2024-04-12")
+#     print(data)
+
 #     company = "TCS"
 
 #     reddit_posts = fetch_reddit_posts(company)

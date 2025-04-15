@@ -1,22 +1,34 @@
-import os
+# stocksentiment/celery.py
 
+import os
 from celery import Celery
 
-# Set the default Django settings module for the 'celery' program.
+# Set default Django settings for 'celery'
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'stocksentiment.settings')
 
 app = Celery('stocksentiment')
 
-# Using a string here means the worker doesn't have to serialize
-# the configuration object to child processes.
-# - namespace='CELERY' means all celery-related configuration keys
-#   should have a `CELERY_` prefix.
+# Load config from Django settings, namespace 'CELERY'
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Load task modules from all registered Django apps.
-# app.autodiscover_tasks()
-app.autodiscover_tasks(['core'])  # Explicitly list your apps
+# Autodiscover tasks from all installed apps
+app.autodiscover_tasks()
+
+
 
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')
+
+from datetime import timedelta
+from django.utils import timezone
+from datetime import datetime
+
+
+app.conf.beat_schedule = {
+    'analyze-every-6-hours': {
+        'task': 'core.tasks.sentiment_analysis',
+        'schedule': timedelta(seconds=20),
+        'args': ("TCS.NS",),  # Default company
+    },
+}

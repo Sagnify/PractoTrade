@@ -21,5 +21,6 @@ from core import views as cv
 urlpatterns = [
     path('admin/', admin.site.urls),
     # path('sentiment-analysis/', cv.sentiment_analysis, name='sentiment_analysis'),
-    # path('', cv.home, name='home')
+    path('predict/', cv.predict_stock_price, name='predict_stock_price'),
+
 ]

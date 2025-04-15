@@ -4,6 +4,15 @@ from .models import CompanySentiment
 from django.http import JsonResponse
 from django.utils.timezone import now
 from datetime import datetime
+import joblib
+import numpy as np
+import os
+from django.views.decorators.csrf import csrf_exempt
+import json
+import pandas as pd
+
+
+
 
 
 # def sentiment_analysis(request):
@@ -60,5 +69,56 @@ from datetime import datetime
 
 
 # from .task import handle_sleep
+
+
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'stock_model.pkl')
+model = joblib.load(MODEL_PATH)
+
+
+@csrf_exempt
+def predict_stock_price(request):
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body.decode('utf-8'))
+            company_name = body.get('company_name')
+
+            if not company_name:
+                return JsonResponse({'error': 'Company name is required'}, status=400)
+
+            # Fetch the latest 7 entries for the company
+            entries = CompanySentiment.objects.filter(company_name=company_name).order_by('-timestamp')[:7]
+
+            if len(entries) < 7:
+                return JsonResponse({'error': 'Not enough data for the company'}, status=400)
+
+            # Extract features
+            data = []
+            for entry in entries:
+                stock_data = entry.stock_data
+                data.append({
+                    'Open': stock_data.get('open'),
+                    'High': stock_data.get('high'),
+                    'Low': stock_data.get('low'),
+                    'Volume': stock_data.get('volume'),
+                    'SentimentScore': entry.sentiment_score
+                })
+
+            df = pd.DataFrame(data)
+            aggregated_features = df.mean().to_list()
+
+            # Predict
+            prediction = model.predict([aggregated_features])[0]
+
+            return JsonResponse({
+                'company': company_name,
+                'aggregated_input': dict(zip(df.columns, aggregated_features)),
+                'predicted_Close': round(float(prediction), 2)
+            }, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Only POST method allowed'}, status=405)
+
 
 

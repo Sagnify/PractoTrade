@@ -7,7 +7,7 @@ def fetch_clean_google_news(company_name, limit=20):
     articles = []
 
     for entry in feed.entries[:limit]:
-        title = entry.title.strip()
+        title = str(entry.title).strip()
 
         articles.append({
             'title': title,

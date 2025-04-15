@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render,HttpResponse
 from .scripts import fetch_analyze as fa
 from .models import CompanySentiment
 from django.http import JsonResponse
@@ -53,3 +53,34 @@ def sentiment_analysis(request):
         ),
         'status': 'Saved to database'
     })
+
+
+from .task import handle_sleep
+
+def home(request):
+
+    handle_sleep.delay()  # Call the Celery task
+    return HttpResponse("Welcome to the Stock Sentiment Analysis API!")
+
+# tasks.py
+from celery import Celery
+
+app = Celery('tasks', broker='redis://localhost:6379/0')
+
+# @app.task
+# def fetch_company_data(ticker):
+#     # This is the fetch worker's job
+#     twitter_data = get_twitter_posts(ticker)
+#     news_data = get_reuters_news(ticker)
+#     return {'twitter': twitter_data, 'news': news_data}
+
+# @app.task
+# def analyze_sentiment(raw_data):
+#     # This is the processing worker's job
+#     twitter_sentiment = analyze_text(raw_data['twitter'])
+#     news_sentiment = analyze_text(raw_data['news'])
+#     return {'ticker': raw_data['ticker'], 
+#             'sentiment': {'twitter': twitter_sentiment, 'news': news_sentiment}}
+
+# # Then you'd chain them together:
+# result = fetch_company_data.delay('AAPL').then(analyze_sentiment.delay)

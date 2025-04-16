@@ -23,5 +23,7 @@ urlpatterns = [
     path('sentiment-analysis/', cv.sentiment_analysis_manual, name='sentiment_analysis'),
     path('predict_all_stock_prices/', cv.predict_all_stock_prices, name='predict_all_stock_prices'),
     path('get_predicted_stock_price/<str:company_name>/', cv.get_predicted_stock_price, name='get_predicted_stock_price'),
+    path('api/stock-chart/', cv.stock_chart_api, name='stock_chart_api'),
+    path('stock-chart/', cv.stock_chart_view, name='stock_chart_view'),
 
 ]

@@ -1,6 +1,6 @@
 from django.shortcuts import render,HttpResponse
 from .scripts import fetch_analyze as fa
-from .models import CompanySentiment
+from .models import CompanySentiment, StockPrediction
 from django.http import JsonResponse
 from django.utils.timezone import now
 from datetime import datetime
@@ -10,8 +10,24 @@ import os
 from django.views.decorators.csrf import csrf_exempt
 import json
 import pandas as pd
+from django.utils.timezone import now
+from django.db.models import F
 
 
+company_tickers = [
+    'META',        # Meta (formerly Facebook)
+    'TSLA',        # Tesla
+    'MSFT',        # Microsoft
+    'GOOGL',       # Google (Alphabet Inc.)
+    'AAPL',        # Apple
+    'TCS.NS',      # Tata Consultancy Services
+    'INFY.NS',     # Infosys
+    'HDFCBANK.NS', # HDFC Bank
+    'RELIANCE.NS', # Reliance Industries
+    'WIPRO.NS',     # Wipro
+    'ITCLTD.NS',  # ITC Limited
+    'HINDUNILVR.NS', # Hindustan Unilever
+]
 
 
 
@@ -109,11 +125,21 @@ def predict_stock_price(request):
             # Predict
             prediction = model.predict([aggregated_features])[0]
 
+            obj, created = StockPrediction.objects.update_or_create(
+                company_name=company_name,
+                defaults={
+                    'predicted_price': prediction,
+                    'prediction_time': now()
+                }
+            )
+
             return JsonResponse({
                 'company': company_name,
                 'aggregated_input': dict(zip(df.columns, aggregated_features)),
-                'predicted_Close': round(float(prediction), 2)
+                'predicted_Close': round(float(prediction), 2),
+                'status': 'created' if created else 'updated'
             }, status=200)
+        
 
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)

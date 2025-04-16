@@ -6,6 +6,22 @@ from django.http import JsonResponse
 from django.utils.timezone import now
 from datetime import datetime
 
+
+company_tickers = [
+    'META',        # Meta (formerly Facebook)
+    'TSLA',        # Tesla
+    'MSFT',        # Microsoft
+    'GOOGL',       # Google (Alphabet Inc.)
+    'AAPL',        # Apple
+    'TCS.NS',      # Tata Consultancy Services
+    'INFY.NS',     # Infosys
+    'HDFCBANK.NS', # HDFC Bank
+    'RELIANCE.NS', # Reliance Industries
+    'WIPRO.NS',     # Wipro
+    'ITCLTD.NS',  # ITC Limited
+    'HINDUNILVR.NS', # Hindustan Unilever
+]
+
 @shared_task(name="core.tasks.sentiment_analysis")
 def sentiment_analysis(company="TCS.NS"):
 
@@ -63,3 +79,12 @@ def sentiment_analysis(company="TCS.NS"):
         'stock_data' : stock_data,
         'status': 'Saved to database'
     }
+
+def company_wise_sentiment_analysis():
+
+    results = {}
+    for company in company_tickers:
+        result = sentiment_analysis(company)
+        results[company] = result
+
+    return JsonResponse(results)

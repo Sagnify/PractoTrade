@@ -27,6 +27,8 @@ def sentiment_analysis(company="TCS.NS"):
         total_avg = reddit_avg or news_avg  # Use whichever is available
 
     # Save result to DB
+    print("Creating CompanySentiment entry...")
+
     CompanySentiment.objects.create(
         company_name=company,
         reddit_score=reddit_avg,
@@ -40,6 +42,8 @@ def sentiment_analysis(company="TCS.NS"):
         stock_data = stock_data,
         timestamp=now()
     )
+    print("Created!")
+
 
     # Return JSON response
     print("Sentiment analysis completed and saved to database.")

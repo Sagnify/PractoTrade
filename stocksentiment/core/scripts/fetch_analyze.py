@@ -8,7 +8,8 @@ import yfinance as yf
 analyzer = SentimentIntensityAnalyzer()
 
 def fetch_reddit_posts(company_name, subreddit='stocks', limit=20):
-    url = f'https://www.reddit.com/r/{subreddit}/search.json?q={company_name}&restrict_sr=1&sort=new&limit={limit}'
+    c_name = company_name.replace(".NS", "")
+    url = f'https://www.reddit.com/r/{subreddit}/search.json?q={c_name}&restrict_sr=1&sort=new&limit={limit}'
     headers = {'User-Agent': 'Mozilla/5.0'}
 
     response = requests.get(url, headers=headers)

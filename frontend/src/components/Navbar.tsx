@@ -20,18 +20,18 @@ const Navbar = () => {
           type="text"
           placeholder="search"
         />
-        <button className="bg-blue-700 text-white rounded-r-xl px-3 h-10">
+        <button className="bg-blue-700 text-white rounded-r-xl px-3 h-11 w-10" >
           🔎
         </button>
       </div>
       <div className="flex gap-3">
         <Link href="/login">
-          <button className="bg-green-500 text-white rounded-xl px-3 h-10 hover:outline-white hover:border-2 cursor-pointer">
+          <button className="bg-blue-500 text-white rounded-xl px-3 h-9 hover:cursor-pointer">
             Login
           </button>
         </Link>
         <Link href="/signup">
-          <button className="bg-blue-700 text-white rounded-xl px-3 h-10 hover:outline-white hover:border-2 cursor-pointer">
+          <button className="bg-blue-500 text-white rounded-xl px-3 h-9 hover: cursor-pointer">
             Signup
           </button>
         </Link>

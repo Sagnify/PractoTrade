@@ -101,9 +101,19 @@ def sentiment_analysis_manual(request):
 # from .task import handle_sleep
 
 
+# Set up the model path
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'stock_model.pkl')
-model = joblib.load(MODEL_PATH)
 
+# Create a function to lazily load the model
+def get_model():
+    if not hasattr(get_model, "_model"):
+        # Load the model only once, when it is needed
+        print("Loading model...")
+        get_model._model = joblib.load(MODEL_PATH)
+    return get_model._model
+
+# Usage example
+model = get_model()
 
 def get_last_close_price(ticker):
     end_date = datetime.now()

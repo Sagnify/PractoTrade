@@ -3,7 +3,7 @@ from .scripts import fetch_analyze as fa
 from .models import CompanySentiment, StockPrediction
 from django.http import JsonResponse
 from django.utils.timezone import now
-from datetime import datetime
+from datetime import datetime, timedelta
 import joblib
 import numpy as np
 import os
@@ -12,14 +12,15 @@ import json
 import pandas as pd
 from django.utils.timezone import now
 from django.db.models import F
+import yfinance as yf
 
 
 company_tickers = [
     'META',         # Meta
     'TSLA',         # Tesla
     'MSFT',         # Microsoft
-    'GOOGL',        # Google
-    'AAPL',         # Apple
+    # 'GOOGL',        # Google
+    # 'AAPL',         # Apple
     'TCS.NS',       # Tata Consultancy Services
     'INFY.NS',      # Infosys
     'HDFCBANK.NS',  # HDFC Bank
@@ -100,29 +101,46 @@ MODEL_PATH = os.path.join(os.path.dirname(__file__), 'stock_model.pkl')
 model = joblib.load(MODEL_PATH)
 
 
+def get_last_close_price(ticker):
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=7)  # In case of weekends/holidays
+
+    data = yf.download(ticker, start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
+
+    if not data.empty:
+        # Get the last available close price
+        last_close = data['Close'].iloc[-1]
+        return float(last_close)
+    else:
+        return None
+
 @csrf_exempt
 def predict_all_stock_prices(request):
     if request.method != 'GET':
         return JsonResponse({'error': 'Only GET method allowed'}, status=405)
+
     predictions = []
     errors = []
 
     for company_name in company_tickers:
-        entries = CompanySentiment.objects.filter(company_name=company_name).order_by('-timestamp')[:7]
-
-        if len(entries) < 7:
-            # Insert with predicted price 0
-            StockPrediction.objects.update_or_create(
-                company_name=company_name,
-                defaults={
-                    'predicted_price': 0,
-                    'prediction_time': datetime.now()
-                }
-            )
-            errors.append({'company': company_name, 'error': 'Insufficient data'})
-            continue
-
         try:
+            entries = CompanySentiment.objects.filter(company_name=company_name).order_by('-timestamp')[:7]
+
+            if len(entries) < 7:
+                # Insert with predicted price 0 if data is insufficient
+                StockPrediction.objects.update_or_create(
+                    company_name=company_name,
+                    defaults={
+                        'predicted_price': 0,
+                        'prediction_time': datetime.now(),
+                        'predicted_percentage_change': 0,
+                        'direction': 'neutral',
+                    }
+                )
+                errors.append({'company': company_name, 'error': 'Insufficient data'})
+                continue
+
+            # Prepare input data
             data = []
             for entry in entries:
                 stock_data = entry.stock_data
@@ -131,25 +149,42 @@ def predict_all_stock_prices(request):
                     'High': stock_data.get('high'),
                     'Low': stock_data.get('low'),
                     'Volume': stock_data.get('volume'),
-                    'SentimentScore': entry.sentiment_score
+                    'SentimentScore': entry.sentiment_score,
                 })
 
             df = pd.DataFrame(data)
             aggregated_features = df.mean().to_list()
 
+            # Predict price
             prediction = model.predict([aggregated_features])[0]
 
+            # Get last close price using yfinance
+            last_close_price = get_last_close_price(company_name)
+
+            if last_close_price:
+                percentage_change = ((prediction - last_close_price) / last_close_price) * 100
+                direction = 'up' if percentage_change > 0 else 'down' if percentage_change < 0 else 'neutral'
+            else:
+                percentage_change = 0
+                direction = 'neutral'
+
+            # Save to DB
             StockPrediction.objects.update_or_create(
                 company_name=company_name,
                 defaults={
-                    'predicted_price': prediction,
-                    'prediction_time': datetime.now()
+                    'predicted_price': round(float(prediction), 2),
+                    'prediction_time': datetime.now(),
+                    'predicted_percentage_change': round(float(percentage_change), 2),
+                    'direction': direction,
                 }
             )
 
+            # Append to response
             predictions.append({
                 'company': company_name,
-                'predicted_Close': round(float(prediction), 2)
+                'predicted_Close': round(float(prediction), 2),
+                'predicted_percentage_change': round(float(percentage_change), 2),
+                'direction': direction,
             })
 
         except Exception as e:
@@ -170,7 +205,9 @@ def get_predicted_stock_price(request, company_name):
                 return JsonResponse({
                     'company': company_name,
                     'predicted_Close': round(float(prediction.predicted_price), 2),
-                    'prediction_time': prediction.prediction_time.strftime('%Y-%m-%d %H:%M:%S')
+                    'prediction_time': prediction.prediction_time.strftime('%Y-%m-%d %H:%M:%S'),
+                    'predicted_percentage_change': prediction.predicted_percentage_change,
+                    'direction': prediction.direction,
                 }, status=200)
             else:
                 return JsonResponse({'error': 'Prediction not found for this company'}, status=404)

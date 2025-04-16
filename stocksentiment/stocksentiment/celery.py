@@ -25,10 +25,22 @@ from django.utils import timezone
 from datetime import datetime
 
 
+
+
 app.conf.beat_schedule = {
-    'analyze-every-6-hours': {
-        'task': 'core.tasks.sentiment_analysis',
+    'analyze-all-every-20-seconds': {
+        'task': 'core.tasks.company_wise_sentiment_analysis',
         'schedule': timedelta(seconds=20),
-        'args': ("TCS.NS",),  # Default company
+        'args': (),  # Explicitly no arguments
+
     },
 }
+
+
+# app.conf.beat_schedule = {
+#     'analyze-every-6-hours': {
+#         'task': 'core.tasks.sentiment_analysis',
+#         'schedule': timedelta(seconds=20),
+#         'args': ("TCS.NS",),  # Default company
+#     },
+# }

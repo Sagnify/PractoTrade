@@ -1,4 +1,4 @@
-from celery import shared_task
+from celery import shared_task, Task
 from django.shortcuts import render,HttpResponse
 from .scripts import fetch_analyze as fa
 from .models import CompanySentiment
@@ -22,8 +22,8 @@ company_tickers = [
     'HINDUNILVR.NS', # Hindustan Unilever
 ]
 
-@shared_task(name="core.tasks.sentiment_analysis")
-def sentiment_analysis(company="TCS.NS"):
+@shared_task(bind=True, name="core.tasks.sentiment_analysis")
+def sentiment_analysis(self, company: str) -> dict: 
 
     # Fetch Reddit and News sentiments
     reddit_posts = fa.fetch_reddit_posts(company)
@@ -80,11 +80,18 @@ def sentiment_analysis(company="TCS.NS"):
         'status': 'Saved to database'
     }
 
-def company_wise_sentiment_analysis():
+
+
+@shared_task(bind=True, name="core.tasks.company_wise_sentiment_analysis")
+def company_wise_sentiment_analysis(self):
 
     results = {}
     for company in company_tickers:
-        result = sentiment_analysis(company)
+        # result = sentiment_analysis(company)
+        result = sentiment_analysis.delay(company) # type: ignore
         results[company] = result
 
-    return JsonResponse(results)
+    return results
+
+
+

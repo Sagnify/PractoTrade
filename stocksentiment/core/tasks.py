@@ -11,8 +11,8 @@ company_tickers = [
     'META',        # Meta (formerly Facebook)
     'TSLA',        # Tesla
     'MSFT',        # Microsoft
-    'GOOGL',       # Google (Alphabet Inc.)
-    'AAPL',        # Apple
+    # 'GOOGL',       # Google (Alphabet Inc.)
+    # 'AAPL',        # Apple
     'TCS.NS',      # Tata Consultancy Services
     'INFY.NS',     # Infosys
     'HDFCBANK.NS', # HDFC Bank

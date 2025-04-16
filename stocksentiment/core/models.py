@@ -24,6 +24,11 @@ class StockPrediction(models.Model):
     company_name = models.CharField(max_length=100)
     predicted_price = models.FloatField()
     prediction_time = models.DateTimeField()
+    predicted_percentage_change = models.FloatField()
+    direction = models.CharField(max_length=10, choices=[
+        ('up', 'Up'),
+        ('down', 'Down')
+    ])
     # sentiment_score = models.FloatField()
     # prediction_interval = models.CharField(max_length=20)  # e.g., "Next 6 Hours"
 

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stock Candlestick Chart</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .chart-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            /* Fixed height for chart container */
+            height: 600px;
+        }
+        #chart {
+            width: 100%;
+            height: 100%;
+        }
+        .form-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        select, input, button {
+            padding: 8px 12px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        input {
+            min-width: 150px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        h1 {
+            color: #333;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            font-size: 18px;
+            color: #666;
+        }
+        .error {
+            color: #d32f2f;
+            padding: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Stock Candlestick Chart</h1>
+        
+        <div class="form-container">
+            <label for="company">Company:</label>
+            <input type="text" id="company" value="TCS.NS" placeholder="Enter stock symbol (e.g., TCS.NS, AAPL)">
+            
+            <label for="interval">Interval:</label>
+            <select id="interval">
+                <option value="realtime">Realtime</option>
+                <option value="1d">1 Day</option>
+                <option value="7d">7 Days</option>
+            </select>
+            
+            <button onclick="loadChart()">Generate Chart</button>
+        </div>
+        
+        <div class="chart-container">
+            <div id="chart">
+                <div class="loading">Loading chart...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function loadChart() {
+            const company = document.getElementById('company').value;
+            const interval = document.getElementById('interval').value;
+            
+            // Show loading message
+            document.getElementById('chart').innerHTML = '<div class="loading">Loading chart...</div>';
+            
+            console.log(`Fetching chart for ${company} with interval ${interval}`);
+            
+            // Make API request
+            fetch(`/api/stock-chart/?company=${encodeURIComponent(company)}&interval=${interval}`)
+                .then(response => {
+                    console.log('Response received:', response.status);
+                    
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            console.error('API error:', data);
+                            throw new Error(data.error || `Failed to load chart (${response.status})`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Chart data received');
+                    
+                    // Clear the loading message
+                    document.getElementById('chart').innerHTML = '';
+                    
+                    // Enhance the layout for better display
+                    if (data.chart_data && data.chart_data.layout) {
+                        // Ensure the layout has proper size settings
+                        data.chart_data.layout.autosize = true;
+                        data.chart_data.layout.height = 550;
+                        data.chart_data.layout.margin = {
+                            l: 50,
+                            r: 50,
+                            b: 50,
+                            t: 50,
+                            pad: 4
+                        };
+                    }
+                    
+                    // Render the chart
+                    Plotly.newPlot('chart', data.chart_data.data, data.chart_data.layout, {responsive: true});
+                    console.log('Chart rendered');
+                })
+                .catch(error => {
+                    console.error('Error loading chart:', error);
+                    document.getElementById('chart').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                });
+        }
+        
+        // Add event listeners for form submission
+        document.getElementById('company').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadChart();
+            }
+        });
+        
+        document.getElementById('interval').addEventListener('change', function() {
+            loadChart();
+        });
+        
+        // Load default chart when page loads
+        window.addEventListener('load', function() {
+            console.log('Page loaded, fetching default chart');
+            loadChart();
+        });
+    </script>
+</body>
+</html>

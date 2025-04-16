@@ -7,40 +7,48 @@ import yfinance as yf
 
 analyzer = SentimentIntensityAnalyzer()
 
-def fetch_reddit_posts(company_name, subreddit='stocks', limit=20):
+def fetch_reddit_posts(company_name, subreddits=None, limit=20):
+    if subreddits is None:
+        subreddits = ['stocks', 'investing', 'wallstreetbets', 'IndianStockMarket']
+
     c_name = company_name.replace(".NS", "")
-    url = f'https://www.reddit.com/r/{subreddit}/search.json?q={c_name}&restrict_sr=1&sort=new&limit={limit}'
     headers = {'User-Agent': 'Mozilla/5.0'}
+    posts = []
 
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        data = response.json()
-
-        posts = []
-        for post in data['data']['children']:
-            title = post['data']['title']
-            content = post['data'].get('selftext', '')
-            full_text = f"{title} {content}"
-
-            sentiment = analyzer.polarity_scores(full_text)
-            compound = sentiment['compound']
-            category = (
-                "positive" if compound >= 0.05 else
-                "negative" if compound <= -0.05 else
-                "neutral"
-            )
-
-            posts.append({
-                'title': title,
-                'content': content,
-                'sentiment_score': compound,
-                'sentiment_category': category
-            })
+    for subreddit in subreddits:
+        url = f'https://www.reddit.com/r/{subreddit}/search.json?q={c_name}&restrict_sr=1&sort=new&limit={limit}'
         
-        return posts
-    else:
-        print(f"Error fetching posts: {response.status_code}")
-        return []
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                for post in data['data']['children']:
+                    title = post['data']['title']
+                    content = post['data'].get('selftext', '')
+                    full_text = f"{title} {content}"
+
+                    sentiment = analyzer.polarity_scores(full_text)
+                    compound = sentiment['compound']
+                    category = (
+                        "positive" if compound >= 0.05 else
+                        "negative" if compound <= -0.05 else
+                        "neutral"
+                    )
+
+                    posts.append({
+                        'subreddit': subreddit,
+                        'title': title,
+                        'content': content,
+                        'sentiment_score': compound,
+                        'sentiment_category': category
+                    })
+            else:
+                print(f"[{subreddit}] Error fetching posts: {response.status_code}")
+        except Exception as e:
+            print(f"[{subreddit}] Exception: {e}")
+
+    return posts
+
 
 def fetch_clean_google_news(company_name, limit=20):
     rss_url = f'https://news.google.com/rss/search?q={company_name}'
@@ -103,21 +111,24 @@ def get_stock_data_on_date(ticker_symbol, date_str):
         return {"error": str(e)}
 
 # Example usage
-# if __name__ == "__main__":
+if __name__ == "__main__":
 #     data = get_stock_data_on_date("TCS.NS", "2024-04-12")
 #     print(data)
 
-#     company = "TCS"
+    company = "TCS.NS"
 
-#     reddit_posts = fetch_reddit_posts(company)
-#     news_articles = fetch_clean_google_news(company)
-#     reddit_scores = [post['sentiment_score'] for post in reddit_posts]
-#     news_scores = [article['sentiment_score'] for article in news_articles]
+    reddit_posts = fetch_reddit_posts(company)
+    news_articles = fetch_clean_google_news(company)
+    reddit_scores = [post['sentiment_score'] for post in reddit_posts]
+    news_scores = [article['sentiment_score'] for article in news_articles]
 
-#     reddit_avg = sum(reddit_scores) / len(reddit_scores) if reddit_scores else 0
-#     news_avg = sum(news_scores) / len(news_scores) if news_scores else 0
+    print("Reddit Scores:", reddit_scores)
+    print("News Scores:", news_scores)
 
-#     total_avg = (reddit_avg + news_avg) / 2 if reddit_scores and news_scores else 0
-#     print(f"Average Sentiment Score for {company}: {total_avg:.2f}")
+    reddit_avg = sum(reddit_scores) / len(reddit_scores) if reddit_scores else 0
+    news_avg = sum(news_scores) / len(news_scores) if news_scores else 0
+
+    total_avg = (reddit_avg + news_avg) / 2 if reddit_scores and news_scores else 0
+    print(f"Average Sentiment Score for {company}: {total_avg:.2f}")
 
 

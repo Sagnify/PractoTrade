@@ -63,4 +63,3 @@ def sentiment_analysis(company="TCS.NS"):
         'stock_data' : stock_data,
         'status': 'Saved to database'
     }
-    print("Task is running!")

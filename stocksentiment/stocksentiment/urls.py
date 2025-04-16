@@ -20,7 +20,8 @@ from core import views as cv
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # path('sentiment-analysis/', cv.sentiment_analysis, name='sentiment_analysis'),
-    path('predict/', cv.predict_stock_price, name='predict_stock_price'),
+    path('sentiment-analysis/', cv.sentiment_analysis_manual, name='sentiment_analysis'),
+    path('predict_all_stock_prices/', cv.predict_all_stock_prices, name='predict_all_stock_prices'),
+    path('get_predicted_stock_price/<str:company_name>/', cv.get_predicted_stock_price, name='get_predicted_stock_price'),
 
 ]

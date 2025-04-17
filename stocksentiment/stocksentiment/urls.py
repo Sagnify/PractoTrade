@@ -26,5 +26,6 @@ urlpatterns = [
     path('api/stock-chart/', cv.stock_chart_api, name='stock_chart_api'),
     path('stock-chart/', cv.stock_chart_view, name='stock_chart_view'),
     path('api/companies/', cv.company_list, name='company_list'),
+    path('api/reddit-posts/', cv.reddit_post_fetcher_by_company, name='reddit-posts'),
 
 ]

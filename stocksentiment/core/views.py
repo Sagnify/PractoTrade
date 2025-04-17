@@ -1,4 +1,5 @@
 from django.shortcuts import render,HttpResponse
+import requests
 from .scripts import fetch_analyze as fa
 from .models import CompanySentiment, StockPrediction
 from django.http import JsonResponse
@@ -460,3 +461,42 @@ def company_list(request):
 
 
     return JsonResponse({'companies': companies})
+
+@csrf_exempt
+def reddit_post_fetcher_by_company(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+    ticker = request.GET.get('ticker', '').upper()
+    if not ticker:
+        return JsonResponse({'error': 'Ticker is required'}, status=400)
+
+    subreddits = ['stocks', 'investing', 'wallstreetbets', 'StockMarket', 'RobinHood', 'options']
+    post_links = []
+
+    for subreddit in subreddits:
+        try:
+            url = f"https://www.reddit.com/r/{subreddit}/search.json"
+            headers = {'User-agent': 'Mozilla/5.0'}
+            params = {
+                'q': ticker,
+                'sort': 'new',
+                'restrict_sr': 'on',
+                'limit': 10
+            }
+
+            response = requests.get(url, headers=headers, params=params)
+            if response.status_code == 200:
+                data = response.json()
+                for post in data.get('data', {}).get('children', []):
+                    link = f"https://reddit.com{post['data']['permalink']}"
+                    if link not in post_links:
+                        post_links.append(link)
+                    if len(post_links) >= 5:
+                        break
+
+            if len(post_links) >= 5:
+                break
+        except Exception as e:
+            continue
+
+    return JsonResponse({'ticker': ticker, 'post_links': post_links[:5]})

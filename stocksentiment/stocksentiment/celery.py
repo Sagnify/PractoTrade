@@ -30,7 +30,7 @@ from datetime import datetime
 app.conf.beat_schedule = {
     'analyze-all-every-20-seconds': {
         'task': 'core.tasks.company_wise_sentiment_analysis',
-        'schedule': timedelta(seconds=20),
+        'schedule': timedelta(minutes=5),
         'args': (),  # Explicitly no arguments
 
     },

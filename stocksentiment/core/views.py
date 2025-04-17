@@ -1,3 +1,4 @@
+import random
 from django.shortcuts import render,HttpResponse
 import requests
 from .scripts import fetch_analyze as fa
@@ -245,29 +246,96 @@ def predict_all_stock_prices(request):
 
 
 
+# @csrf_exempt
+# def get_predicted_stock_price(request, company_name):
+#     if request.method != 'GET':
+#         return
+
+#     try:
+#         # Get the latest prediction for the company
+#         prediction = StockPrediction.objects.filter(company_name=company_name).order_by('-prediction_time').first()
+
+#         if not prediction:
+#             return JsonResponse({'error': 'Prediction not found for this company'}, status=404)
+
+#         # Build the base URL
+#         base_url = request.build_absolute_uri('/')[:-1]  # removes trailing slash
+
+#         # API links for different periods
+#         candle_urls = {
+#             'realtime': f"{base_url}/api/stock-chart/?company={company_name}&interval=realtime",
+#             '1d': f"{base_url}/api/stock-chart/?company={company_name}&interval=1d",
+#             '7d': f"{base_url}/api/stock-chart/?company={company_name}&interval=7d",
+#         }
+
+#         # Return the predicted information along with the API links
+#         return JsonResponse({
+#             'company': company_name,
+#             'predicted_with_sentiment': round(float(prediction.predicted_price_with_sentiment), 2),
+#             'predicted_without_sentiment': round(float(prediction.predicted_price_without_sentiment), 2),
+#             'avg_predicted_price': round(float(prediction.avg_predicted_price), 2),
+#             'prediction_time': prediction.prediction_time.strftime('%Y-%m-%d %H:%M:%S'),
+#             'predicted_percentage_change': round(float(prediction.predicted_percentage_change), 2),
+#             'direction': prediction.direction,
+#             'api_links': candle_urls,
+#         }
+#         , status=200)
+
+#     except Exception as e:
+#         return JsonResponse({'error': str(e)}, status=500)
+
+
+
 @csrf_exempt
 def get_predicted_stock_price(request, company_name):
     if request.method != 'GET':
-        return
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
 
     try:
-        # Get the latest prediction for the company
+        # Try to fetch prediction from DB
         prediction = StockPrediction.objects.filter(company_name=company_name).order_by('-prediction_time').first()
 
-        if not prediction:
-            return JsonResponse({'error': 'Prediction not found for this company'}, status=404)
-
-        # Build the base URL
+        # Build the base URL for API links
         base_url = request.build_absolute_uri('/')[:-1]  # removes trailing slash
-
-        # API links for different periods
         candle_urls = {
             'realtime': f"{base_url}/api/stock-chart/?company={company_name}&interval=realtime",
             '1d': f"{base_url}/api/stock-chart/?company={company_name}&interval=1d",
             '7d': f"{base_url}/api/stock-chart/?company={company_name}&interval=7d",
         }
 
-        # Return the predicted information along with the API links
+        # Dummy companies list with necessary info only
+        dummy_companies = {
+            'AMZN': {'ticker': 'AMZN', 'name': 'Amazon', 'is_in': False},
+            'GOOGL': {'ticker': 'GOOGL', 'name': 'Alphabet', 'is_in': False},
+            'NVDA': {'ticker': 'NVDA', 'name': 'NVIDIA', 'is_in': False},
+            'ITC': {'ticker': 'ITC.NS', 'name': 'ITC', 'is_in': True},
+            'LT': {'ticker': 'LT.NS', 'name': 'Larsen & Toubro', 'is_in': True},
+            'BAJFINANCE': {'ticker': 'BAJFINANCE.NS', 'name': 'Bajaj Finance', 'is_in': True},
+        }
+
+        # If prediction not found, but is a dummy company, return dummy data
+        if not prediction and company_name in dummy_companies:
+            dummy_price_1 = round(random.uniform(1000, 5000), 2)
+            dummy_price_2 = round(dummy_price_1 + random.uniform(-50, 50), 2)
+            avg_price = round((dummy_price_1 + dummy_price_2) / 2, 2)
+            percentage_change = round((avg_price - dummy_price_1) / dummy_price_1 * 100, 2)
+            direction = 'up' if percentage_change > 0 else 'down'
+
+            return JsonResponse({
+                'company': company_name,
+                'predicted_with_sentiment': dummy_price_1,
+                'predicted_without_sentiment': dummy_price_2,
+                'avg_predicted_price': avg_price,
+                'prediction_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'predicted_percentage_change': percentage_change,
+                'direction': direction,
+                'api_links': candle_urls,
+            }, status=200)
+
+        elif not prediction:
+            return JsonResponse({'error': 'Prediction not found for this company'}, status=404)
+
+        # If real prediction exists
         return JsonResponse({
             'company': company_name,
             'predicted_with_sentiment': round(float(prediction.predicted_price_with_sentiment), 2),
@@ -277,12 +345,10 @@ def get_predicted_stock_price(request, company_name):
             'predicted_percentage_change': round(float(prediction.predicted_percentage_change), 2),
             'direction': prediction.direction,
             'api_links': candle_urls,
-        }
-        , status=200)
+        }, status=200)
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
 
 
 @csrf_exempt
@@ -458,17 +524,27 @@ def company_list(request):
     View to return the list of companies with tickers and full names as JSON
     """
     companies = {
-        'META': {'ticker': 'META', 'name': 'Meta',  'is_in': False, 'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.'},
-        'TSLA': {'ticker': 'TSLA', 'name': 'Tesla',  'is_in': False, 'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.'},
-        'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft',  'is_in': False, 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.'},
-        'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services',  'is_in': True, 'description': 'TCS is a leading global IT services and consulting company from India.'},
-        'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys',  'is_in': True, 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.'},
-        'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank',  'is_in': True, 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.'},
-        'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries',  'is_in': True, 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.'},
-        'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro',  'is_in': True, 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.'},
-        # 'ITC': {'ticker': 'ITCLTD.NS', 'name': 'ITC',  'is_in': True, 'description': 'ITC is an Indian conglomerate with businesses in FMCG, hotels, paperboards, and packaging.'},
-        'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever',  'is_in': True, 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.'},
+        'META': {'ticker': 'META', 'name': 'Meta', 'is_in': False, 'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.'},
+        'TSLA': {'ticker': 'TSLA', 'name': 'Tesla', 'is_in': False, 'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.'},
+        'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft', 'is_in': False, 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.'},
+        'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services', 'is_in': True, 'description': 'TCS is a leading global IT services and consulting company from India.'},
+        'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys', 'is_in': True, 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.'},
+        'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'is_in': True, 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.'},
+        'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries', 'is_in': True, 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.'},
+        'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro', 'is_in': True, 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.'},
+        'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever', 'is_in': True, 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.'},
+
+        # 🌍 Global Dummy Companies
+        'AMZN': {'ticker': 'AMZN', 'name': 'Amazon', 'is_in': False, 'description': 'Amazon is a multinational technology company focusing on e-commerce, cloud computing, and AI.'},
+        'GOOGL': {'ticker': 'GOOGL', 'name': 'Alphabet', 'is_in': False, 'description': 'Alphabet is the parent company of Google, focusing on internet services and products.'},
+        'NVDA': {'ticker': 'NVDA', 'name': 'NVIDIA', 'is_in': False, 'description': 'NVIDIA designs GPUs for gaming and professional markets, and is a key player in AI.'},
+
+        # 🇮🇳 Indian Dummy Companies
+        'ITC': {'ticker': 'ITC.NS', 'name': 'ITC', 'is_in': True, 'description': 'ITC is an Indian conglomerate with businesses in FMCG, hotels, paperboards, and packaging.'},
+        'LT': {'ticker': 'LT.NS', 'name': 'Larsen & Toubro', 'is_in': True, 'description': 'L&T is a major Indian multinational in engineering, construction, and manufacturing.'},
+        'BAJFINANCE': {'ticker': 'BAJFINANCE.NS', 'name': 'Bajaj Finance', 'is_in': True, 'description': 'Bajaj Finance provides a range of financial services including loans, insurance, and investment products.'}
     }
+
 
 
     return JsonResponse({'companies': companies})

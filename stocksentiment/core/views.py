@@ -487,11 +487,11 @@ def reddit_post_fetcher_by_company(request):
     for subreddit in subreddits:
         try:
             url = f"https://www.reddit.com/r/{subreddit}/search.json"
-            headers = {'User-agent': 'Mozilla/5.0'}
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
             params = {
                 'q': ticker,
                 'sort': 'new',
-                'restrict_sr': 'on',
+                'restrict_sr': 1,
                 'limit': 10
             }
 

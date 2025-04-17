@@ -408,3 +408,24 @@ def stock_chart_view(request):
     View to render the stock chart page
     """
     return render(request, 'stock_chart.html') 
+
+
+def company_list(request):
+    """
+    View to return the list of companies with tickers and full names as JSON
+    """
+    companies = {
+        'META': 'Meta',
+        'TSLA': 'Tesla',
+        'MSFT': 'Microsoft',
+        # 'GOOGL': 'Google',
+        # 'AAPL': 'Apple',
+        'TCS.NS': 'Tata Consultancy Services',
+        'INFY.NS': 'Infosys',
+        'HDFCBANK.NS': 'HDFC Bank',
+        'RELIANCE.NS': 'Reliance Industries',
+        'WIPRO.NS': 'Wipro',
+        'ITCLTD.NS': 'ITC',
+        'HINDUNILVR.NS': 'Hindustan Unilever',
+    }
+    return JsonResponse({'companies': companies})

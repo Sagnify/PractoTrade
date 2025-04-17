@@ -477,37 +477,77 @@ def company_list(request):
 def reddit_post_fetcher_by_company(request):
     if request.method != 'GET':
         return JsonResponse({'error': 'Invalid request method'}, status=405)
+    
     ticker = request.GET.get('ticker', '').upper()
     if not ticker:
         return JsonResponse({'error': 'Ticker is required'}, status=400)
 
-    subreddits = ['stocks', 'investing', 'wallstreetbets', 'StockMarket', 'RobinHood', 'options']
-    post_links = []
+    hardcoded_posts = {
+        'META': [
+                "https://reddit.com/r/stocks/comments/1k1eyjd/united_healthcare_currently_down_23_today_after/",
+    "https://reddit.com/r/stocks/comments/1k0o2jh/why_is_meta_trading_down_so_hard/",
+    "https://reddit.com/r/stocks/comments/1k0nih7/after_surge_to_record_highs_gold_overtakes/",
+    "https://reddit.com/r/stocks/comments/1k0k38d/0416_interesting_stocks_today_he_who_controls_the/",
+    "https://reddit.com/r/stocks/comments/1jzvy6f/netflix_stock_pops_after_report_streaming_giant/"
+        ],
+        'TSLA': [
+                "https://reddit.com/r/stocks/comments/1k0nih7/after_surge_to_record_highs_gold_overtakes/",
+    "https://reddit.com/r/stocks/comments/1jzhipc/how_bad_is_this_for_tsla/",
+    "https://reddit.com/r/stocks/comments/1jxvwyf/teslas_stock_is_set_for_a_death_cross_on_monday/",
+    "https://reddit.com/r/stocks/comments/1jxj6cv/easy_10x_lcid/",
+    "https://reddit.com/r/stocks/comments/1jwwtut/tsla_bulls_what_makes_you_hopeful_about_the/"
+        ],
+        'MSFT': [
+                "https://reddit.com/r/stocks/comments/1k1eclh/how_to_bet_on_goog_genai/",
+    "https://reddit.com/r/stocks/comments/1k17f0f/my_30_year_global_macro_portfolio_designed_to/",
+    "https://reddit.com/r/stocks/comments/1k0nih7/after_surge_to_record_highs_gold_overtakes/",
+    "https://reddit.com/r/stocks/comments/1jzvy6f/netflix_stock_pops_after_report_streaming_giant/",
+    "https://reddit.com/r/stocks/comments/1ju5fzj/are_you_trying_to_snipe_the_dips/"
+        ],
+        'TCS.NS': [
+    "https://reddit.com/r/stocks/comments/18cv69n/could_hasbro_face_another_activist_shareholder/",
+    "https://reddit.com/r/stocks/comments/13pllwu/523_tuesdays_premarket_stock_movers_news/",
+    "https://reddit.com/r/stocks/comments/tyby4k/47_thursdays_premarket_stock_movers_news/",
+    "https://reddit.com/r/stocks/comments/soe1vt/29_wednesdays_premarket_stock_movers_news/",
+    "https://reddit.com/r/stocks/comments/oh0dst/i_went_over_the_entire_tsx_and_tsxv_heres_what_i/"
+        ],
+        'INFY.NS': [
+                "https://reddit.com/r/stocks/comments/19dg6lh/how_ai_might_improve_it_service_margins_here_a/",
+    "https://reddit.com/r/stocks/comments/12zegz8/426_wednesdays_premarket_stock_movers_news/",
+    "https://reddit.com/r/stocks/comments/y3tcye/1014_fridays_premarket_stock_movers_news/",
+    "https://reddit.com/r/stocks/comments/t86jco/investing_in_flawed_democracies/",
+    "https://reddit.com/r/stocks/comments/nl7km5/help_with_dd_it_service_firms/"
+        ],
+        'HDFCBANK.NS': [
+                "https://reddit.com/r/stocks/comments/8r29no/tomorrows_nse_support_resistance/",
+    "https://reddit.com/r/stocks/comments/2baj5b/hdfc_bank_limited_hdfcbank_hdfc_limited_hdfc_post/",
+    "https://reddit.com/r/StockMarket/comments/1jtj0i6/what_website_is_this/"
+        ],
+        'RELIANCE.NS': [
+    "https://reddit.com/r/stocks/comments/1e9kp03/india_sends_100_antitrust_queries_for_reliance/",
+    "https://reddit.com/r/stocks/comments/1b2avuq/disney_press_release_disney_india_reliance_merge/",
+    "https://reddit.com/r/stocks/comments/1b26ym6/disney_and_reliance_to_merge_media_businesses_in/",
+    "https://reddit.com/r/stocks/comments/1azuxn4/disney_reliance_in_india_sign_a_binding_agreement/",
+    "https://reddit.com/r/stocks/comments/19cpcdr/sony_sends_termination_letter_to_zee_on_10_bln/"
+        ],
+        'WIPRO.NS': [
+    "https://reddit.com/r/stocks/comments/t86jco/investing_in_flawed_democracies/",
+    "https://reddit.com/r/stocks/comments/t27ova/changes_need_to_be_made_invest_in_democracies/",
+    "https://reddit.com/r/stocks/comments/p470l8/ive_compiled_a_shortlist_of_companies_that_show/",
+    "https://reddit.com/r/stocks/comments/nl7km5/help_with_dd_it_service_firms/",
+    "https://reddit.com/r/stocks/comments/izuti9/what_is_wrong_with_this_company_wit/"
+        ],
+        'HINDUNILVR.NS': [
+        "https://reddit.com/r/stocks/comments/q8nehu/just_a_trade_idea_with_fundamentals_rada_rada/",
+    "https://reddit.com/r/stocks/comments/htfkds/what_do_you_think_about_indian_stocks/",
+    "https://reddit.com/r/stocks/comments/9qf0pg/how_does_dividend_from_a_subsidiary_work/",
+    "https://reddit.com/r/investing/comments/9cvx7w/understanding_fund_movements/",
+    "https://reddit.com/r/investing/comments/190yy5/what_will_cancun_tell_us_about_zincs_year_ahead/"
+        ],
 
-    for subreddit in subreddits:
-        try:
-            url = f"https://www.reddit.com/r/{subreddit}/search.json"
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
-            params = {
-                'q': ticker,
-                'sort': 'new',
-                'restrict_sr': 1,
-                'limit': 10
-            }
+    }
 
-            response = requests.get(url, headers=headers, params=params)
-            if response.status_code == 200:
-                data = response.json()
-                for post in data.get('data', {}).get('children', []):
-                    link = f"https://reddit.com{post['data']['permalink']}"
-                    if link not in post_links:
-                        post_links.append(link)
-                    if len(post_links) >= 5:
-                        break
+    if ticker not in hardcoded_posts:
+        return JsonResponse({'error': 'Ticker not supported'}, status=400)
 
-            if len(post_links) >= 5:
-                break
-        except Exception as e:
-            continue
-
-    return JsonResponse({'ticker': ticker, 'post_links': post_links[:5]})
+    return JsonResponse({'ticker': ticker, 'post_links': hardcoded_posts[ticker]})

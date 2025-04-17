@@ -144,8 +144,7 @@ def predict_all_stock_prices(request):
     predictions = []
     errors = []
 
-    model_with_sentiment = get_model_1()
-    model_without_sentiment = get_model_2()
+
 
     for company_name in company_tickers:
         try:
@@ -166,6 +165,9 @@ def predict_all_stock_prices(request):
                 )
                 errors.append({'company': company_name, 'error': 'Insufficient data'})
                 continue
+
+            model_with_sentiment = get_model_1()
+            model_without_sentiment = get_model_2()
 
             # Prepare input data
             data = []

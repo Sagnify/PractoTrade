@@ -446,17 +446,17 @@ def company_list(request):
     View to return the list of companies with tickers and full names as JSON
     """
     companies = {
-        'META': 'Meta',
-        'TSLA': 'Tesla',
-        'MSFT': 'Microsoft',
-        # 'GOOGL': 'Google',
-        # 'AAPL': 'Apple',
-        'TCS.NS': 'Tata Consultancy Services',
-        'INFY.NS': 'Infosys',
-        'HDFCBANK.NS': 'HDFC Bank',
-        'RELIANCE.NS': 'Reliance Industries',
-        'WIPRO.NS': 'Wipro',
-        'ITCLTD.NS': 'ITC',
-        'HINDUNILVR.NS': 'Hindustan Unilever',
+        'META': {'ticker': 'META', 'name': 'Meta',  'is_in': False, 'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.'},
+        'TSLA': {'ticker': 'TSLA', 'name': 'Tesla',  'is_in': False, 'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.'},
+        'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft',  'is_in': False, 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.'},
+        'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services',  'is_in': True, 'description': 'TCS is a leading global IT services and consulting company from India.'},
+        'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys',  'is_in': True, 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.'},
+        'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank',  'is_in': True, 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.'},
+        'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries',  'is_in': True, 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.'},
+        'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro',  'is_in': True, 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.'},
+        'ITC': {'ticker': 'ITCLTD.NS', 'name': 'ITC',  'is_in': True, 'description': 'ITC is an Indian conglomerate with businesses in FMCG, hotels, paperboards, and packaging.'},
+        'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever',  'is_in': True, 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.'},
     }
+
+
     return JsonResponse({'companies': companies})

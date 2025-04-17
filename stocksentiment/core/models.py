@@ -22,7 +22,9 @@ class CompanySentiment(models.Model):
 
 class StockPrediction(models.Model):
     company_name = models.CharField(max_length=100)
-    predicted_price = models.FloatField()
+    predicted_price_with_sentiment = models.FloatField()
+    predicted_price_without_sentiment = models.FloatField()
+    avg_predicted_price = models.FloatField()
     prediction_time = models.DateTimeField()
     predicted_percentage_change = models.FloatField()
     direction = models.CharField(max_length=10, choices=[

@@ -30,7 +30,7 @@ company_tickers = [
     'HDFCBANK.NS',  # HDFC Bank
     'RELIANCE.NS',  # Reliance Industries
     'WIPRO.NS',     # Wipro
-    'ITCLTD.NS',    # ITC
+    # 'ITCLTD.NS',    # ITC
     'HINDUNILVR.NS' # Hindustan Unilever
 ]
 
@@ -101,19 +101,27 @@ def sentiment_analysis_manual(request):
 # from .task import handle_sleep
 
 
-# Set up the model path
-MODEL_PATH = os.path.join(os.path.dirname(__file__), 'stock_model.pkl')
+BASE_DIR = os.path.dirname(__file__)
+MODEL_PATH_1 = os.path.abspath(os.path.join(BASE_DIR, 'stock_model.pkl'))
+MODEL_PATH_2 = os.path.abspath(os.path.join(BASE_DIR, 'stock_model_v2.pkl'))
 
-# Create a function to lazily load the model
-def get_model():
-    if not hasattr(get_model, "_model"):
-        # Load the model only once, when it is needed
-        print("Loading model...")
-        get_model._model = joblib.load(MODEL_PATH)
-    return get_model._model
+# Lazy loader for model 1
+def get_model_1():
+    if not hasattr(get_model_1, "_model"):
+        print("Loading model 1...")
+        get_model_1._model = joblib.load(MODEL_PATH_1)
+    return get_model_1._model
+
+# Lazy loader for model 2
+def get_model_2():
+    if not hasattr(get_model_2, "_model"):
+        print("Loading model 2...")
+        get_model_2._model = joblib.load(MODEL_PATH_2)
+    return get_model_2._model
 
 # Usage example
-model = get_model()
+# model = get_model_1()
+# model_2 = get_model_2()
 
 def get_last_close_price(ticker):
     end_date = datetime.now()
@@ -143,6 +151,8 @@ def predict_all_stock_prices(request):
     predictions = []
     errors = []
 
+
+
     for company_name in company_tickers:
         try:
             entries = CompanySentiment.objects.filter(company_name=company_name).order_by('-timestamp')[:7]
@@ -152,7 +162,9 @@ def predict_all_stock_prices(request):
                 StockPrediction.objects.update_or_create(
                     company_name=company_name,
                     defaults={
-                        'predicted_price': 0,
+                        'predicted_price_with_sentiment': 0,
+                        'predicted_price_without_sentiment': 0,
+                        'avg_predicted_price': 0,
                         'prediction_time': datetime.now(),
                         'predicted_percentage_change': 0,
                         'direction': 'neutral',
@@ -161,29 +173,42 @@ def predict_all_stock_prices(request):
                 errors.append({'company': company_name, 'error': 'Insufficient data'})
                 continue
 
+            model_with_sentiment = get_model_1()
+            model_without_sentiment = get_model_2()
+
             # Prepare input data
             data = []
+            data_no_sentiment = []
             for entry in entries:
                 stock_data = entry.stock_data
-                data.append({
-                    'Open': stock_data.get('open'),
-                    'High': stock_data.get('high'),
-                    'Low': stock_data.get('low'),
-                    'Volume': stock_data.get('volume'),
-                    'SentimentScore': entry.sentiment_score,
-                })
+                data.append([
+                    stock_data.get('open'),
+                    stock_data.get('high'),
+                    stock_data.get('low'),
+                    stock_data.get('volume'),
+                    entry.sentiment_score
+                ])
+                data_no_sentiment.append([
+                    stock_data.get('open'),
+                    stock_data.get('high'),
+                    stock_data.get('low'),
+                ])
 
             df = pd.DataFrame(data)
-            aggregated_features = df.mean().to_list()
+            df_no_sentiment = pd.DataFrame(data_no_sentiment)
 
-            # Predict price
-            prediction = model.predict([aggregated_features])[0]
+            features_with_sentiment = df.mean().tolist()
+            features_without_sentiment = df_no_sentiment.mean().tolist()
 
-            # Get last close price using yfinance
+            # Make predictions
+            pred_with_sentiment = model_with_sentiment.predict([features_with_sentiment])[0]
+            pred_without_sentiment = model_without_sentiment.predict([features_without_sentiment])[0]
+            avg_pred = (pred_with_sentiment + pred_without_sentiment) / 2
+
+            # Get last close price
             last_close_price = get_last_close_price(company_name)
-
             if last_close_price:
-                percentage_change = ((prediction - last_close_price) / last_close_price) * 100
+                percentage_change = ((avg_pred - last_close_price) / last_close_price) * 100
                 direction = 'up' if percentage_change > 0 else 'down' if percentage_change < 0 else 'neutral'
             else:
                 percentage_change = 0
@@ -193,17 +218,20 @@ def predict_all_stock_prices(request):
             StockPrediction.objects.update_or_create(
                 company_name=company_name,
                 defaults={
-                    'predicted_price': round(float(prediction), 2),
+                    'predicted_price_with_sentiment': round(float(pred_with_sentiment), 2),
+                    'predicted_price_without_sentiment': round(float(pred_without_sentiment), 2),
+                    'avg_predicted_price': round(float(avg_pred), 2),
                     'prediction_time': datetime.now(),
                     'predicted_percentage_change': round(float(percentage_change), 2),
                     'direction': direction,
                 }
             )
 
-            # Append to response
             predictions.append({
                 'company': company_name,
-                'predicted_Close': round(float(prediction), 2),
+                'with_sentiment': round(float(pred_with_sentiment), 2),
+                'without_sentiment': round(float(pred_without_sentiment), 2),
+                'average': round(float(avg_pred), 2),
                 'predicted_percentage_change': round(float(percentage_change), 2),
                 'direction': direction,
             })
@@ -241,12 +269,15 @@ def get_predicted_stock_price(request, company_name):
         # Return the predicted information along with the API links
         return JsonResponse({
             'company': company_name,
-            'predicted_Close': round(float(prediction.predicted_price), 2),
+            'predicted_with_sentiment': round(float(prediction.predicted_price_with_sentiment), 2),
+            'predicted_without_sentiment': round(float(prediction.predicted_price_without_sentiment), 2),
+            'avg_predicted_price': round(float(prediction.avg_predicted_price), 2),
             'prediction_time': prediction.prediction_time.strftime('%Y-%m-%d %H:%M:%S'),
-            'predicted_percentage_change': prediction.predicted_percentage_change,
+            'predicted_percentage_change': round(float(prediction.predicted_percentage_change), 2),
             'direction': prediction.direction,
             'api_links': candle_urls,
-        }, status=200)
+        }
+        , status=200)
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
@@ -426,17 +457,17 @@ def company_list(request):
     View to return the list of companies with tickers and full names as JSON
     """
     companies = {
-        'META': 'Meta',
-        'TSLA': 'Tesla',
-        'MSFT': 'Microsoft',
-        # 'GOOGL': 'Google',
-        # 'AAPL': 'Apple',
-        'TCS.NS': 'Tata Consultancy Services',
-        'INFY.NS': 'Infosys',
-        'HDFCBANK.NS': 'HDFC Bank',
-        'RELIANCE.NS': 'Reliance Industries',
-        'WIPRO.NS': 'Wipro',
-        'ITCLTD.NS': 'ITC',
-        'HINDUNILVR.NS': 'Hindustan Unilever',
+        'META': {'ticker': 'META', 'name': 'Meta',  'is_in': False, 'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.'},
+        'TSLA': {'ticker': 'TSLA', 'name': 'Tesla',  'is_in': False, 'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.'},
+        'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft',  'is_in': False, 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.'},
+        'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services',  'is_in': True, 'description': 'TCS is a leading global IT services and consulting company from India.'},
+        'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys',  'is_in': True, 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.'},
+        'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank',  'is_in': True, 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.'},
+        'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries',  'is_in': True, 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.'},
+        'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro',  'is_in': True, 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.'},
+        # 'ITC': {'ticker': 'ITCLTD.NS', 'name': 'ITC',  'is_in': True, 'description': 'ITC is an Indian conglomerate with businesses in FMCG, hotels, paperboards, and packaging.'},
+        'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever',  'is_in': True, 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.'},
     }
+
+
     return JsonResponse({'companies': companies})

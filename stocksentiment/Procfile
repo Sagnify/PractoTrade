@@ -1,1 +1,1 @@
-web: gunicorn stocksentiment.wsgi
+web: gunicorn --workers 1 --timeout 60 --worker-class sync --max-requests 1000 --access-logfile - --error-logfile - stocksentiment.wsgi:application

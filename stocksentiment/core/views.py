@@ -120,8 +120,8 @@ def get_model_2():
     return get_model_2._model
 
 # Usage example
-model = get_model_1()
-model_2 = get_model_2()
+# model = get_model_1()
+# model_2 = get_model_2()
 
 def get_last_close_price(ticker):
     end_date = datetime.now()

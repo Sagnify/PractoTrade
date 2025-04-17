@@ -25,5 +25,6 @@ urlpatterns = [
     path('get_predicted_stock_price/<str:company_name>/', cv.get_predicted_stock_price, name='get_predicted_stock_price'),
     path('api/stock-chart/', cv.stock_chart_api, name='stock_chart_api'),
     path('stock-chart/', cv.stock_chart_view, name='stock_chart_view'),
+    path('api/companies/', cv.company_list, name='company_list'),
 
 ]

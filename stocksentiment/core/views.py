@@ -23,8 +23,8 @@ company_tickers = [
     'META',         # Meta
     'TSLA',         # Tesla
     'MSFT',         # Microsoft
-    # 'GOOGL',        # Google
-    # 'AAPL',         # Apple
+    # 'GOOGL',      # Google
+    # 'AAPL',       # Apple
     'TCS.NS',       # Tata Consultancy Services
     'INFY.NS',      # Infosys
     'HDFCBANK.NS',  # HDFC Bank
@@ -101,9 +101,19 @@ def sentiment_analysis_manual(request):
 # from .task import handle_sleep
 
 
+# Set up the model path
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'stock_model.pkl')
-model = joblib.load(MODEL_PATH)
 
+# Create a function to lazily load the model
+def get_model():
+    if not hasattr(get_model, "_model"):
+        # Load the model only once, when it is needed
+        print("Loading model...")
+        get_model._model = joblib.load(MODEL_PATH)
+    return get_model._model
+
+# Usage example
+model = get_model()
 
 def get_last_close_price(ticker):
     end_date = datetime.now()
@@ -398,3 +408,24 @@ def stock_chart_view(request):
     View to render the stock chart page
     """
     return render(request, 'stock_chart.html') 
+
+
+def company_list(request):
+    """
+    View to return the list of companies with tickers and full names as JSON
+    """
+    companies = {
+        'META': 'Meta',
+        'TSLA': 'Tesla',
+        'MSFT': 'Microsoft',
+        # 'GOOGL': 'Google',
+        # 'AAPL': 'Apple',
+        'TCS.NS': 'Tata Consultancy Services',
+        'INFY.NS': 'Infosys',
+        'HDFCBANK.NS': 'HDFC Bank',
+        'RELIANCE.NS': 'Reliance Industries',
+        'WIPRO.NS': 'Wipro',
+        'ITCLTD.NS': 'ITC',
+        'HINDUNILVR.NS': 'Hindustan Unilever',
+    }
+    return JsonResponse({'companies': companies})

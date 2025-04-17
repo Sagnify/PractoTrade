@@ -30,7 +30,7 @@ company_tickers = [
     'HDFCBANK.NS',  # HDFC Bank
     'RELIANCE.NS',  # Reliance Industries
     'WIPRO.NS',     # Wipro
-    'ITCLTD.NS',    # ITC
+    # 'ITCLTD.NS',    # ITC
     'HINDUNILVR.NS' # Hindustan Unilever
 ]
 
@@ -454,7 +454,7 @@ def company_list(request):
         'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank',  'is_in': True, 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.'},
         'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries',  'is_in': True, 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.'},
         'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro',  'is_in': True, 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.'},
-        'ITC': {'ticker': 'ITCLTD.NS', 'name': 'ITC',  'is_in': True, 'description': 'ITC is an Indian conglomerate with businesses in FMCG, hotels, paperboards, and packaging.'},
+        # 'ITC': {'ticker': 'ITCLTD.NS', 'name': 'ITC',  'is_in': True, 'description': 'ITC is an Indian conglomerate with businesses in FMCG, hotels, paperboards, and packaging.'},
         'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever',  'is_in': True, 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.'},
     }
 

@@ -18,7 +18,7 @@ company_tickers = [
     'HDFCBANK.NS', # HDFC Bank
     'RELIANCE.NS', # Reliance Industries
     'WIPRO.NS',     # Wipro
-    'ITCLTD.NS',  # ITC Limited
+    # 'ITCLTD.NS',  # ITC Limited
     'HINDUNILVR.NS', # Hindustan Unilever
 ]
 

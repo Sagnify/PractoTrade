@@ -1,32 +1,32 @@
-# version: '3.8'
-# services:
-#   redis:
-#     image: redis:latest
-#     container_name: my-redis
-#     ports:
-#       - "6379:6379"
-#     volumes:
-#       - redis_data:/data
-#     restart: unless-stopped
-
-# volumes:
-#   redis_data:
-
-
+version: '3.8'
 services:
-  web:
-    build: .
-    command: gunicorn --bind 0.0.0.0:8000 stocksentiment.wsgi:application
-    volumes:
-      - .:/app
+  redis:
+    image: redis:latest
+    container_name: my-redis
     ports:
-      - "8000:8000"
-    environment:
-      - PGDATABASE=neondb  # Replace with your actual database name
-      - PGUSER=neondb_owner  # Replace with your actual DB user
-      - PGPASSWORD=npg_4ZUCGV8cWRIl  # Replace with your actual DB password
-      - PGHOST=ep-empty-truth-a72h94an-pooler.ap-southeast-2.aws.neon.tech  # Replace with your actual DB host
-      - PGPORT=5432  # Default PostgreSQL port
-      - SSLMODE=require  # Ensure SSL mode is set to 'require'
-      - CELERY_BROKER=redis://your-redis-host:6379/0  # Replace with your actual Redis host for Celery
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+
+# services:
+#   web:
+#     build: .
+#     command: gunicorn --bind 0.0.0.0:8000 stocksentiment.wsgi:application
+#     volumes:
+#       - .:/app
+#     ports:
+#       - "8000:8000"
+#     environment:
+#       - PGDATABASE=neondb  # Replace with your actual database name
+#       - PGUSER=neondb_owner  # Replace with your actual DB user
+#       - PGPASSWORD=npg_4ZUCGV8cWRIl  # Replace with your actual DB password
+#       - PGHOST=ep-empty-truth-a72h94an-pooler.ap-southeast-2.aws.neon.tech  # Replace with your actual DB host
+#       - PGPORT=5432  # Default PostgreSQL port
+#       - SSLMODE=require  # Ensure SSL mode is set to 'require'
+#       - CELERY_BROKER=redis://your-redis-host:6379/0  # Replace with your actual Redis host for Celery
 

@@ -130,12 +130,19 @@ def get_last_close_price(ticker):
 
     data = yf.download(ticker, start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
 
-    if not data.empty:
-        # Get the last available close price
-        last_close = data['Close'].iloc[-1]
-        return float(last_close)
-    else:
+    # if not data.empty:
+    #     # Get the last available close price
+    #     last_close = data['Close'].iloc[-1]
+    #     return float(last_close)
+    # else:
+    #     return None
+
+    if data is None or data.empty:  # Check both for None and empty DataFrame
         return None
+
+    # Get the last available close price
+    last_close = data['Close'].iloc[-1]
+    return float(last_close)
 
 @csrf_exempt
 def predict_all_stock_prices(request):
@@ -321,6 +328,9 @@ def stock_chart_api(request):  # sourcery skip: low-code-quality
         # Fetch stock data with explicit progress=False to avoid tqdm issues
         data = yf.download(company, period=period, interval=yf_interval, progress=False)
         
+        if data is None:
+            print(f"Failed to fetch data for {company}")
+            return JsonResponse({'error': f'Failed to fetch data for {company}'}, status=404)
         if data.empty:
             print(f"No data found for {company}")
             return JsonResponse({'error': f'No data found for {company}'}, status=404)
@@ -338,10 +348,11 @@ def stock_chart_api(request):  # sourcery skip: low-code-quality
         if not pd.api.types.is_datetime64_any_dtype(data.index):
             data.index = pd.to_datetime(data.index)
             print("Converted index to datetime")
+
         
         # Fix: Convert Series to list instead of using tolist() on DataFrame
         # Format datetime for JSON serialization
-        datetime_values = data.index.strftime('%Y-%m-%d %H:%M:%S').tolist()
+        datetime_values = data.index.strftime('%Y-%m-%d %H:%M:%S').tolist() # type: ignore
         
         # Check if columns are MultiIndex (happens with some yfinance versions)
         if isinstance(data.columns, pd.MultiIndex):

@@ -20,7 +20,7 @@ const Navbar = () => {
           type="text"
           placeholder="search"
         />
-        <button className="bg-blue-700 text-white rounded-r-xl px-3 h-11 w-10" >
+        <button className="bg-blue-700 text-white rounded-r-xl px-3 h-10 w-10" >
           🔎
         </button>
       </div>

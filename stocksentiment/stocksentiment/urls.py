@@ -28,5 +28,6 @@ urlpatterns = [
     path('api/companies/', cv.company_list, name='company_list'),
     path('api/reddit-posts/', cv.reddit_post_fetcher_by_company, name='reddit-posts'),
     path('api/company-poll/<str:company_name>/', cv.company_poll_api),
+    path('api/news/all/', cv.all_company_news, name='all_company_news'),
 
 ]

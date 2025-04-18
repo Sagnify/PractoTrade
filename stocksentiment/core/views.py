@@ -1,5 +1,6 @@
 import random
 from django.shortcuts import render,HttpResponse
+import feedparser
 import requests
 from .scripts import fetch_analyze as fa
 from .models import CompanySentiment, StockPrediction, StockPrediction, DailyPoll, PollOption, Vote
@@ -21,7 +22,7 @@ from plotly.utils import PlotlyJSONEncoder
 import plotly.graph_objects as go
 import traceback
 from django.views.decorators.http import require_http_methods
-
+from django.views.decorators.http import require_GET
 
 company_tickers = [
     'META',         # Meta
@@ -705,3 +706,29 @@ def company_poll_api(request, company_name):
 
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
+
+
+
+# COMPANY_LIST = [
+#     'META', 'TSLA', 'MSFT', 'TCS.NS', 'INFY.NS', 'HDFCBANK.NS', 'RELIANCE.NS', 'WIPRO.NS',
+#     'HINDUNILVR.NS', 'AMZN', 'GOOGL', 'NVDA', 'ITC.NS', 'LT', 'BAJFINANCE'
+# ]
+
+@csrf_exempt
+@require_GET
+def all_company_news(request):
+    news_data = {}
+
+    for company in COMPANY_LIST:
+        rss_url = f"https://news.google.com/rss/search?q={company}"
+        feed = feedparser.parse(rss_url)
+        articles = [
+            {
+                'title': entry.title,
+                'url': entry.link
+            }
+            for entry in feed.entries[:10]  # You can change number of articles here
+        ]
+        news_data[company] = articles
+
+    return JsonResponse(news_data, status=200)

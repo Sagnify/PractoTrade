@@ -1,140 +1,135 @@
-# 📈 Sentiment-Driven Stock Price Predictor
+# 💹 PractoTrade — Sentiment-Driven Stock Price Predictor
 
-A hackathon project that uses sentiment analysis of social media and financial news to predict next-day stock prices of Indian blue-chip companies.
+A hackathon project that forecasts the **next-day closing prices** of Indian blue-chip stocks by combining **real-time sentiment analysis** with **historical market data** using dual regression models.
 
 ---
 
 ## 🚀 Overview
 
-This project collects and analyzes real-time sentiment data from financial news and social media platforms every 6 hours for 10 selected Indian blue-chip stocks. It then uses the sentiment scores along with recent stock price data to predict the stock's closing price for the next day using a machine learning model.
+**PractoTrade** is a full-stack AI application that analyzes financial news and social media sentiment every few hours and blends it with recent stock performance to predict the next day's closing price. It leverages **two regression models**—one with sentiment scores, and one without—to return an **aggregated and smarter prediction**.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Backend Framework**: Python (Django)
-- **Task Scheduling & Queue**: Celery + Redis
-- **Natural Language Processing**: NLTK + VADER Sentiment Analyzer
-- **Machine Learning**: Scikit-learn
-- **Stock Data Source**: Yahoo Finance API / NSE API
-- **News Sources**: Financial APIs (e.g., Reuters, Bloomberg)
-- **Social Media Sources**: Twitter API / Reddit API (or scrapers)
+- **Backend**: Django (App name: `core`)
+- **Frontend**: NEXT JS + ShadCN (⚡ polished and production-ready)
+- **Scheduler**: Celery + Redis (runs automatic sentiment polling every 6 hours)
+- **Machine Learning**: Scikit-learn (2 custom regression models)
+- **NLP**: VADER via NLTK for sentiment scoring
+- **Data Source**: Yahoo Finance API, Reddit, Google News scraping
+- **Database**: SQLite / PostgreSQL
+- **DevOps**: Dockerized for easy setup and deployment (optional)
 
 ---
 
-## 🔁 How It Works
+## 🔁 Workflow
 
-### 1. Data Collection
+### 1. Automated Data Collection
+- Runs every 6 hours using scheduled management commands.
+- For each predefined company:
+  - Scrapes top posts from Reddit and headlines from Google News.
+  - Assigns a **sentiment score** using VADER.
 
-- Every 6 hours, a Celery worker:
-  - Collects ~80 social media posts and ~20 financial news articles per company.
-  - This is done for **10 Indian blue-chip companies**.
-  - After processing all 10 companies, it waits 6 hours and repeats the cycle.
+### 2. Data Aggregation
+- Stores:
+  - Past 7 days' OHLC stock data
+  - Real-time sentiment scores
+- Saves everything in the `CompanySentiment` model.
 
-### 2. Sentiment Analysis
-
-- Uses `nltk` and `vaderSentiment` to score each post/article:
-  - Scores range from negative (e.g., -3.2) to positive (e.g., +2.5).
-- Sentiment values are averaged and stored per company per cycle.
-
-### 3. Stock Price Tracking
-
-- Retrieves the **opening and closing prices** for the last 7 days for each stock.
-
-### 4. Prediction
-
-- Sentiment scores + 7 days of historical stock prices are fed into a **Scikit-learn regression model**.
-- The model outputs the **predicted closing price** for the next trading day.
+### 3. Prediction
+- Two regression models are trained:
+  - **Model 1**: Predicts next-day close using **historical data only**
+  - **Model 2**: Uses **historical data + sentiment score**
+- Final result is the **average of both model outputs** for stability.
 
 ---
 
-## 🧠 Machine Learning Model
+## 📈 Machine Learning Models
 
-- **Features**:
-  - 7-day stock price data (open & close)
-  - Recent sentiment scores
-- **Model**: Linear Regression (extendable to advanced models like XGBoost or LSTM)
-- **Target**: Next-day closing price of the stock
+- **Inputs**:
+  - Past 7 days' open, high, low, close, volume
+  - Latest sentiment score (for model 2)
+- **Model Type**: Linear Regression (extendable to LSTM or XGBoost)
+- **Target**: Next-day closing price
 
 ---
 
-## 📦 Installation & Setup
+## 📦 Setup Instructions
 
-### Clone the repository
-
+### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/sentiment-stock-predictor.git
-cd sentiment-stock-predictor
+git clone https://github.com/Sagnify/PractoTrade.git
+cd PractoTrade
+```
 
-Install dependencies
-
-bash
+### 2. Install Backend Dependencies
+```bash
 pip install -r requirements.txt
+```
 
-Set up Redis
-Make sure Redis server is running:
-redis-server
+### 3. Run Migrations & Server
+```bash
+python manage.py makemigrations
+python manage.py migrate
+python manage.py runserver
+```
 
+### 4. (Optional) Run Scheduled Jobs
+```bash
+python manage.py fetch_daily_sentiment
+```
 
-Start Celery and the FastAPI server
-bash
-Copy
-Edit
+---
 
-celery -A app.celery_app worker --loglevel=info
-uvicorn app.main:app --reload
+## 📊 Sample Output
 
+```
+Company: Tata Consultancy Services (TCS)
+Predicted Close (with Sentiment): ₹3578.40
+Predicted Close (without Sentiment): ₹3590.10
+📌 Final Aggregated Prediction: ₹3584.25
+```
 
-.
-├── app/
-│   ├── main.py              # FastAPI entrypoint
-│   ├── celery_app.py        # Celery config
-│   ├── tasks.py             # Scheduled data collection tasks
-│   ├── sentiment/           # Sentiment analysis logic
-│   ├── ml_model/            # Machine learning training/prediction code
-│   └── data/                # Raw and processed data
-├── requirements.txt
-├── README.md
-└── .env                     # API keys and configs
+---
 
+## 🛣️ Future Scope
 
-🔮 Example Output
-Tata Steel:
+- [ ] Upgrade to **FinBERT** for more accurate financial sentiment detection
+- [ ] Integrate real-time data visualization dashboard with charts
+- [ ] Add prediction confidence intervals
+- [ ] Containerize with Docker for scalable deployments
+- [ ] Send alerts via Telegram/Email for abnormal market sentiment shifts
 
-Last sentiment score: +1.8
+---
 
-Predicted closing price (tomorrow): ₹128.35
+## ✨ Features
 
-Reliance:
+- 🔁 **Automated Data Collection** (every 6 hours)
+- 📊 **Dual-Model Prediction** logic for reliability
+- 🧠 **NLP-Powered Sentiment Analysis** from real news/posts
+- 📉 **Company-wise Trend Tracking**
+- 💻 **Beautiful Frontend** with no-code poll UI
+- 🗳️ **Community Polling System** where users can vote daily on market sentiment per company
 
-Last sentiment score: -0.7
+---
 
-Predicted closing price (tomorrow): ₹2673.10
+## 📍 Focused Companies
+- Reliance, TCS, Infosys, HDFC Bank, ICICI, Tata Steel, Axis Bank, SBI, Wipro, HCL Tech
 
-🕒 Automation Cycle
-Task workers (Celery) are configured to:
+---
 
-Run jobs every 6 hours
+## 📄 License
 
-Collect, analyze, and store sentiment & stock data
+This project is open-source under the **MIT License**.
 
-Predict prices
+---
 
-Sleep and repeat
+## 🔗 Contributing
 
-📊 Future Scope
-Upgrade sentiment analysis using transformer-based models (e.g., FinBERT, BERT)
+PRs, Issues, and Feature Requests are welcome!  
+Just fork the repo, branch out, and submit a pull request 🙌
 
-Add dashboard with Next.js or React for visualization
+---
 
-Use Docker & Kubernetes for scalable deployment
-
-Add alert system for extreme sentiment shifts
-
-Explore DeFi sentiment and crypto markets
-
-
-
-📝 License
-This project is open-source under the MIT License.
-Let me know if you’d like me to help add badges, screenshots, or set this up for deployment!
+> 💡 _Made with ❤️ for innovation at Hackathons — PractoTrade is not financial advice_

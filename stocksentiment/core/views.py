@@ -651,7 +651,7 @@ def company_poll_api(request, company_name):
         return JsonResponse({'error': 'Poll not available for today'}, status=404)
 
     if request.method == 'GET':
-        options = poll.options.all()
+        options = poll.options.all() # type: ignore
         total_votes = sum(opt.votes for opt in options)
 
         option_data = []
@@ -677,7 +677,7 @@ def company_poll_api(request, company_name):
         return JsonResponse({
             'company': poll.company_name,
             'question': poll.question,
-            'poll_id': poll.id,
+            'poll_id': poll.id, # type: ignore
             'total_votes': total_votes,
             'options': option_data,
             'leading_sentiment': leading_option or {}

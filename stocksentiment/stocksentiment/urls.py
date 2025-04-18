@@ -29,5 +29,6 @@ urlpatterns = [
     path('api/reddit-posts/', cv.reddit_post_fetcher_by_company, name='reddit-posts'),
     path('api/company-poll/<str:company_name>/', cv.company_poll_api), # type: ignore
     path('api/news/all/', cv.all_company_news, name='all_company_news'),
-
+    path('api/signup/', cv.signup_view, name='signup'),
+    path('api/login/', cv.login_view, name='login')
 ]

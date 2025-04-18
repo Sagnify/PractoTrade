@@ -732,3 +732,83 @@ def all_company_news(request):
         news_data[company] = articles
 
     return JsonResponse(news_data, status=200)
+
+
+import uuid
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password, check_password
+from django.contrib.auth import login
+from .models import Viewer
+
+# --- SIGNUP VIEW ---
+@csrf_exempt
+def signup_view(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            email = data.get('email')
+            password = data.get('password')
+
+            if not (username and email and password):
+                return JsonResponse({'error': 'Missing fields'}, status=400)
+
+            if Viewer.objects.filter(email=email).exists():
+                return JsonResponse({'error': 'Email already in use'}, status=400)
+
+            # Create User for name only (as you intended)
+            user = User.objects.create(username=username)
+
+            # Hash password and create Trader
+            hashed_password = make_password(password)
+            viewer = Viewer.objects.create(
+                username=user,
+                email=email,
+                password=hashed_password
+            )
+
+            return JsonResponse({
+                'message': 'Signup successful',
+                'viewer_id': str(viewer.viewer_id)
+            }, status=201)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+# --- LOGIN VIEW ---
+@csrf_exempt
+def login_view(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            email = data.get('email')
+            password = data.get('password')
+
+            if not (email and password):
+                return JsonResponse({'error': 'Missing credentials'}, status=400)
+
+            try:
+                viewer = Viewer.objects.get(email=email)
+            except Viewer.DoesNotExist:
+                return JsonResponse({'error': 'Invalid email or password'}, status=401)
+
+            if not check_password(password, viewer.password):
+                return JsonResponse({'error': 'Invalid email or password'}, status=401)
+
+            # Optional: login(request, trader.username) if using session-based login
+            return JsonResponse({
+                'message': 'Login successful',
+                'trader_id': str(viewer.viewer_id),
+                'username': viewer.username.username
+            }, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+

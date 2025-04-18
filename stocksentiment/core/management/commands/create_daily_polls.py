@@ -34,3 +34,4 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f'Created poll for {ticker}'))
             else:
                 self.stdout.write(f'Poll already exists for {ticker}')
+

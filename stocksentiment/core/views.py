@@ -24,6 +24,8 @@ import traceback
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_GET
 from django.http import StreamingHttpResponse
+from statsmodels.tsa.arima.model import ARIMA
+
 
 company_tickers = [
     'META',         # Meta
@@ -110,6 +112,7 @@ def sentiment_analysis_manual(request):
 BASE_DIR = os.path.dirname(__file__)
 MODEL_PATH_1 = os.path.abspath(os.path.join(BASE_DIR, 'stock_model.pkl'))
 MODEL_PATH_2 = os.path.abspath(os.path.join(BASE_DIR, 'stock_model_v2.pkl'))
+MODEL_PATH_3 = os.path.abspath(os.path.join(BASE_DIR, 'arima_model_combined.pkl'))
 
 # Lazy loader for model 1
 def get_model_1():
@@ -125,29 +128,16 @@ def get_model_2():
         get_model_2._model = joblib.load(MODEL_PATH_2)
     return get_model_2._model
 
+# Lazy loader for model 3 (ARIMA model)
+def get_model_3():
+    if not hasattr(get_model_3, "_model"):
+        print("Loading ARIMA model...")
+        get_model_3._model = joblib.load(MODEL_PATH_3)
+    return get_model_3._model
+
 # Usage example
 # model = get_model_1()
 # model_2 = get_model_2()
-
-def get_last_close_price(ticker):
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=7)  # In case of weekends/holidays
-
-    data = yf.download(ticker, start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
-
-    # if not data.empty:
-    #     # Get the last available close price
-    #     last_close = data['Close'].iloc[-1]
-    #     return float(last_close)
-    # else:
-    #     return None
-
-    if data is None or data.empty:  # Check both for None and empty DataFrame
-        return None
-
-    # Get the last available close price
-    last_close = data['Close'].iloc[-1]
-    return float(last_close)
 
 @csrf_exempt
 def predict_all_stock_prices(request):
@@ -158,35 +148,35 @@ def predict_all_stock_prices(request):
     errors = []
 
 
-
     for company_name in company_tickers:
+        
         try:
             entries = CompanySentiment.objects.filter(company_name=company_name).order_by('-timestamp')[:7]
 
             if len(entries) < 7:
-                # Insert with predicted price 0 if data is insufficient
                 StockPrediction.objects.update_or_create(
                     company_name=company_name,
                     defaults={
                         'predicted_price_with_sentiment': 0,
                         'predicted_price_without_sentiment': 0,
                         'avg_predicted_price': 0,
-                        'prediction_time': datetime.now(),
+                        'prediction_time': timezone.now(),
                         'predicted_percentage_change': 0,
                         'direction': 'neutral',
+                        'predicted_price_with_arima': 0,
                     }
                 )
                 errors.append({'company': company_name, 'error': 'Insufficient data'})
                 continue
 
-            model_with_sentiment = get_model_1()
-            model_without_sentiment = get_model_2()
-
-            # Prepare input data
             data = []
             data_no_sentiment = []
+            closing_prices = []
+            timestamps = []
+
             for entry in entries:
                 stock_data = entry.stock_data
+
                 data.append([
                     stock_data.get('open'),
                     stock_data.get('high'),
@@ -194,42 +184,78 @@ def predict_all_stock_prices(request):
                     stock_data.get('volume'),
                     entry.sentiment_score
                 ])
+
                 data_no_sentiment.append([
                     stock_data.get('open'),
                     stock_data.get('high'),
                     stock_data.get('low'),
                 ])
 
-            df = pd.DataFrame(data)
-            df_no_sentiment = pd.DataFrame(data_no_sentiment)
+                close_price = stock_data.get('close')
+                if close_price is not None:
+                    closing_prices.append(float(close_price))
+                    timestamps.append(entry.timestamp)
 
-            features_with_sentiment = df.mean().tolist()
-            features_without_sentiment = df_no_sentiment.mean().tolist()
+            df = pd.DataFrame(data, columns=['open', 'high', 'low', 'volume', 'sentiment_score'])
+            df_no_sentiment = pd.DataFrame(data_no_sentiment, columns=['open', 'high', 'low'])
 
-            # Make predictions
-            pred_with_sentiment = model_with_sentiment.predict([features_with_sentiment])[0]
-            pred_without_sentiment = model_without_sentiment.predict([features_without_sentiment])[0]
-            avg_pred = (pred_with_sentiment + pred_without_sentiment) / 2
+            try:
+                model_with_sentiment = get_model_1()
+                model_without_sentiment = get_model_2()
 
-            # Get last close price
+                features_with_sentiment = df.mean().values.tolist()
+                features_without_sentiment = df_no_sentiment.mean().values.tolist()
+
+                pred_with_sentiment = model_with_sentiment.predict([features_with_sentiment])[0]
+                pred_without_sentiment = model_without_sentiment.predict([features_without_sentiment])[0]
+            except Exception as e:
+                print(f"Error predicting for {company_name} using RandomForest: {str(e)}")
+                pred_with_sentiment = 0
+                pred_without_sentiment = 0
+
+
+            arima_pred = 0
+            try:
+                if len(closing_prices) >= 7:
+                    ts = pd.Series(closing_prices, index=timestamps)
+                    ts = ts.sort_index()
+
+                    model = ARIMA(ts.values, order=(1, 1, 0))
+                    model_fit = model.fit()
+
+                    forecast = model_fit.forecast(steps=1)
+                    arima_pred = forecast[0]
+                else:
+                    print(f"Not enough closing prices for {company_name} ARIMA model")
+            except Exception as e:
+                print(f"Error in ARIMA for {company_name}: {str(e)}")
+                arima_pred = 0
+                import traceback
+                traceback.print_exc()
+
+            # Calculate average only after all predictions are done
+            avg_pred = (pred_with_sentiment + pred_without_sentiment + arima_pred) / 3
+            
             last_close_price = get_last_close_price(company_name)
             if last_close_price:
-                percentage_change = ((avg_pred - last_close_price) / last_close_price) * 100
+                percentage_change = ((avg_pred - last_close_price) / avg_pred) * 100
                 direction = 'up' if percentage_change > 0 else 'down' if percentage_change < 0 else 'neutral'
             else:
                 percentage_change = 0
                 direction = 'neutral'
 
-            # Save to DB
+
+
             StockPrediction.objects.update_or_create(
                 company_name=company_name,
                 defaults={
                     'predicted_price_with_sentiment': round(float(pred_with_sentiment), 2),
                     'predicted_price_without_sentiment': round(float(pred_without_sentiment), 2),
                     'avg_predicted_price': round(float(avg_pred), 2),
-                    'prediction_time': datetime.now(),
+                    'prediction_time': timezone.now(),
                     'predicted_percentage_change': round(float(percentage_change), 2),
                     'direction': direction,
+                    'predicted_price_with_arima': round(float(arima_pred), 2),
                 }
             )
 
@@ -240,13 +266,29 @@ def predict_all_stock_prices(request):
                 'average': round(float(avg_pred), 2),
                 'predicted_percentage_change': round(float(percentage_change), 2),
                 'direction': direction,
+                'arima_pred': round(float(arima_pred), 2),
             })
 
         except Exception as e:
             errors.append({'company': company_name, 'error': str(e)})
+            import traceback
+            traceback.print_exc()
 
     return JsonResponse({'predictions': predictions, 'errors': errors}, status=200)
 
+# Make sure to fix the get_last_close_price function as well
+def get_last_close_price(company_name):
+    try:
+        latest_entry = CompanySentiment.objects.filter(company_name=company_name).order_by('-timestamp').first()
+        if latest_entry:
+            stock_data = latest_entry.stock_data
+            last_close = stock_data.get('close')
+            # Fix for the float conversion warning
+            return float(last_close) if isinstance(last_close, (int, float)) else None
+        return None
+    except Exception as e:
+        print(f"Error getting last close price for {company_name}: {str(e)}")
+        return None
 
 
 
@@ -344,6 +386,7 @@ def get_predicted_stock_price(request, company_name):
             'company': company_name,
             'predicted_with_sentiment': round(float(prediction.predicted_price_with_sentiment), 2),
             'predicted_without_sentiment': round(float(prediction.predicted_price_without_sentiment), 2),
+            'arima_pred': round(float(prediction.predicted_price_with_arima), 2),
             'avg_predicted_price': round(float(prediction.avg_predicted_price), 2),
             'prediction_time': prediction.prediction_time.strftime('%Y-%m-%d %H:%M:%S'),
             'predicted_percentage_change': round(float(prediction.predicted_percentage_change), 2),
@@ -718,28 +761,22 @@ def company_poll_api(request, company_name):
 @csrf_exempt
 @require_GET
 def all_company_news(request):
-    def stream_news():
-        yield '['  # Start of JSON array
-        first = True
-        for company in COMPANY_LIST:
-            rss_url = f"https://news.google.com/rss/search?q={company}"
-            feed = feedparser.parse(rss_url)
-            articles = [
-                {
-                    'company': company,
-                    'title': entry.title,
-                    'url': entry.link
-                }
-                for entry in feed.entries[:10]
-            ]
-            for article in articles:
-                if not first:
-                    yield ','
-                yield json.dumps(article)
-                first = False
-        yield ']'  # End of JSON array
+    all_articles = []
 
-    return StreamingHttpResponse(stream_news(), content_type='application/json')
+    for company in COMPANY_LIST:
+        rss_url = f"https://news.google.com/rss/search?q={company}"
+        feed = feedparser.parse(rss_url)
+        articles = [
+            {
+                'company': company,
+                'title': entry.title,
+                'url': entry.link
+            }
+            for entry in feed.entries[:10]
+        ]
+        all_articles.extend(articles)
+
+    return JsonResponse({'news': all_articles}, safe=False)
 
 
 import uuid

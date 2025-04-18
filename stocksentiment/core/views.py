@@ -23,6 +23,7 @@ import plotly.graph_objects as go
 import traceback
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_GET
+from django.http import StreamingHttpResponse
 
 company_tickers = [
     'META',         # Meta
@@ -717,21 +718,28 @@ def company_poll_api(request, company_name):
 @csrf_exempt
 @require_GET
 def all_company_news(request):
-    news_data = {}
+    def stream_news():
+        yield '['  # Start of JSON array
+        first = True
+        for company in COMPANY_LIST:
+            rss_url = f"https://news.google.com/rss/search?q={company}"
+            feed = feedparser.parse(rss_url)
+            articles = [
+                {
+                    'company': company,
+                    'title': entry.title,
+                    'url': entry.link
+                }
+                for entry in feed.entries[:10]
+            ]
+            for article in articles:
+                if not first:
+                    yield ','
+                yield json.dumps(article)
+                first = False
+        yield ']'  # End of JSON array
 
-    for company in COMPANY_LIST:
-        rss_url = f"https://news.google.com/rss/search?q={company}"
-        feed = feedparser.parse(rss_url)
-        articles = [
-            {
-                'title': entry.title,
-                'url': entry.link
-            }
-            for entry in feed.entries[:10]  # You can change number of articles here
-        ]
-        news_data[company] = articles
-
-    return JsonResponse(news_data, status=200)
+    return StreamingHttpResponse(stream_news(), content_type='application/json')
 
 
 import uuid

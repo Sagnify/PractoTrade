@@ -2,10 +2,11 @@ import random
 from django.shortcuts import render,HttpResponse
 import requests
 from .scripts import fetch_analyze as fa
-from .models import CompanySentiment, StockPrediction
+from .models import CompanySentiment, StockPrediction, StockPrediction, DailyPoll, PollOption, Vote
 from django.http import JsonResponse
 from django.utils.timezone import now
 from datetime import datetime, timedelta
+from django.utils import timezone
 import joblib
 import numpy as np
 import pandas as pd
@@ -19,6 +20,7 @@ import yfinance as yf
 from plotly.utils import PlotlyJSONEncoder
 import plotly.graph_objects as go
 import traceback
+from django.views.decorators.http import require_http_methods
 
 
 company_tickers = [
@@ -627,3 +629,79 @@ def reddit_post_fetcher_by_company(request):
         return JsonResponse({'error': 'Ticker not supported'}, status=400)
 
     return JsonResponse({'ticker': ticker, 'post_links': hardcoded_posts[ticker]})
+
+
+
+COMPANY_LIST = [
+    'META', 'TSLA', 'MSFT', 'TCS.NS', 'INFY.NS', 'HDFCBANK.NS', 'RELIANCE.NS', 'WIPRO.NS',
+    'HINDUNILVR.NS', 'AMZN', 'GOOGL', 'NVDA', 'ITC.NS', 'LT', 'BAJFINANCE'
+]
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def company_poll_api(request, company_name):
+    today = timezone.now().date()
+    company_name_upper = company_name.upper()
+
+    if company_name_upper not in COMPANY_LIST:
+        return JsonResponse({'error': 'Company not found'}, status=404)
+
+    poll = DailyPoll.objects.filter(company_name=company_name_upper, created_at=today).first()
+    if not poll:
+        return JsonResponse({'error': 'Poll not available for today'}, status=404)
+
+    if request.method == 'GET':
+        options = poll.options.all()
+        total_votes = sum(opt.votes for opt in options)
+
+        option_data = []
+        leading_option = None
+        max_votes = -1
+
+        for opt in options:
+            percent = round((opt.votes / total_votes) * 100, 2) if total_votes > 0 else 0.0
+            option_data.append({
+                'id': opt.id,
+                'text': opt.option_text,
+                'votes': opt.votes,
+                'percentage': percent
+            })
+
+            if opt.votes > max_votes:
+                leading_option = {
+                    'text': opt.option_text,
+                    'percentage': percent
+                }
+                max_votes = opt.votes
+
+        return JsonResponse({
+            'company': poll.company_name,
+            'question': poll.question,
+            'poll_id': poll.id,
+            'total_votes': total_votes,
+            'options': option_data,
+            'leading_sentiment': leading_option or {}
+        }, status=200)
+
+
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            session_id = data.get('session_id')
+            option_id = data.get('option_id')
+
+            if not session_id or not option_id:
+                return JsonResponse({'error': 'Missing session_id or option_id'}, status=400)
+
+            if Vote.objects.filter(poll=poll, session_id=session_id).exists():
+                return JsonResponse({'message': 'You have already voted today'}, status=403)
+
+            option = PollOption.objects.get(id=option_id, poll=poll)
+            option.votes += 1
+            option.save()
+
+            Vote.objects.create(poll=poll, option=option, session_id=session_id)
+            return JsonResponse({'message': 'Vote submitted successfully'}, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)

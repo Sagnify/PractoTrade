@@ -36,3 +36,35 @@ class StockPrediction(models.Model):
 
     def __str__(self):
         return f"{self.company_name} Prediction @ {self.prediction_time}"
+
+
+
+class DailyPoll(models.Model):
+    company_name = models.CharField(max_length=50)  # Use company name or ticker directly
+    question = models.CharField(max_length=255)
+    created_at = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Poll for {self.company_name} on {self.created_at}"
+
+
+class PollOption(models.Model):
+    poll = models.ForeignKey(DailyPoll, related_name="options", on_delete=models.CASCADE)
+    option_text = models.CharField(max_length=100)
+    votes = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.option_text} ({self.votes} votes)"
+
+
+class Vote(models.Model):
+    poll = models.ForeignKey(DailyPoll, on_delete=models.CASCADE)
+    session_id = models.CharField(max_length=255)  # Anonymous session/user from localStorage
+    option = models.ForeignKey(PollOption, on_delete=models.CASCADE)
+    voted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('poll', 'session_id')  # Enforce 1 vote per poll per session
+
+    def __str__(self):
+        return f"Vote on {self.poll} by {self.session_id}"

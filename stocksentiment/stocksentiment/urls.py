@@ -27,6 +27,11 @@ urlpatterns = [
     path('stock-chart/', cv.stock_chart_view, name='stock_chart_view'),
     path('api/companies/', cv.company_list, name='company_list'),
     path('api/reddit-posts/', cv.reddit_post_fetcher_by_company, name='reddit-posts'),
+<<<<<<< HEAD
     path('api/company-poll/<str:company_name>/', cv.company_poll_api), # type: ignore
+=======
+    path('api/company-poll/<str:company_name>/', cv.company_poll_api),
+    path('api/news/all/', cv.all_company_news, name='all_company_news'),
+>>>>>>> 9bed7a634459b9ce4c8800a62d1ce06a1f42e46c
 
 ]

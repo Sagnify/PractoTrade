@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 
 class CompanySentiment(models.Model):
@@ -68,3 +69,21 @@ class Vote(models.Model):
 
     def __str__(self):
         return f"Vote on {self.poll} by {self.session_id}"
+    
+
+
+from django.contrib.auth.models import User
+
+class Viewer(models.Model):
+
+    username = models.OneToOneField(User, on_delete=models.CASCADE, max_length=20)
+    viewer_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=255)  # You'll have to hash manually
+
+    def __str__(self):
+        return self.username
+
+
+
+

@@ -1,4 +1,3 @@
-
 # 💹 PractoTrade — Sentiment-Driven Stock Price Predictor
 
 A hackathon project that forecasts the **next-day closing prices** of Indian blue-chip stocks by combining **real-time sentiment analysis** with **historical market data** using dual regression models.
@@ -14,8 +13,8 @@ A hackathon project that forecasts the **next-day closing prices** of Indian blu
 ## 🛠️ Tech Stack
 
 - **Backend**: Django (App name: `core`)
-- **Frontend**: React with responsive & elegant UI (⚡ polished and production-ready)
-- **Scheduler**: Django-Q / Cron (runs automatic sentiment polling every 6 hours)
+- **Frontend**: NEXT JS + ShadCN (⚡ polished and production-ready)
+- **Scheduler**: Celery + Redis (runs automatic sentiment polling every 6 hours)
 - **Machine Learning**: Scikit-learn (2 custom regression models)
 - **NLP**: VADER via NLTK for sentiment scoring
 - **Data Source**: Yahoo Finance API, Reddit, Google News scraping
@@ -60,7 +59,7 @@ A hackathon project that forecasts the **next-day closing prices** of Indian blu
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/PractoTrade.git
+git clone https://github.com/Sagnify/PractoTrade.git
 cd PractoTrade
 ```
 
@@ -111,6 +110,7 @@ Predicted Close (without Sentiment): ₹3590.10
 - 🧠 **NLP-Powered Sentiment Analysis** from real news/posts
 - 📉 **Company-wise Trend Tracking**
 - 💻 **Beautiful Frontend** with no-code poll UI
+- 🗳️ **Community Polling System** where users can vote daily on market sentiment per company
 
 ---
 
@@ -132,4 +132,4 @@ Just fork the repo, branch out, and submit a pull request 🙌
 
 ---
 
-> 💡 _Made with ❤️ for innovation at Hackathons — PractoTrade is not financial advice_  
+> 💡 _Made with ❤️ for innovation at Hackathons — PractoTrade is not financial advice_

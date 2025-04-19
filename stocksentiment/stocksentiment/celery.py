@@ -1,16 +1,11 @@
-# stocksentiment/celery.py
-
 import os
 from celery import Celery
 
 # Set default Django settings for 'celery'
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'stocksentiment.settings')
-
 app = Celery('stocksentiment')
-
 # Load config from Django settings, namespace 'CELERY'
 app.config_from_object('django.conf:settings', namespace='CELERY')
-
 # Autodiscover tasks from all installed apps
 app.autodiscover_tasks()
 
@@ -20,12 +15,9 @@ app.autodiscover_tasks()
 def debug_task(self):
     print(f'Request: {self.request!r}')
 
+
+
 from datetime import timedelta
-from django.utils import timezone
-from datetime import datetime
-
-
-
 
 app.conf.beat_schedule = {
     'analyze-all-every-20-seconds': {

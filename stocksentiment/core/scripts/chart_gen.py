@@ -5,26 +5,26 @@ def fetch_and_plot_stock_data(company_name, period='1d', interval='1m'):
     # Fetch stock data using yfinance
     data = yf.download(company_name, period=period, interval=interval)
 
-    if data.empty:
+    if data.empty: # type: ignore
         print(f"No data found for {company_name}")
         return
 
     # Print the first few rows of the data for inspection
     print(f"Fetched data for {company_name}:")
-    print(data.head())
+    print(data.head()) # type: ignore
     
     # Reset index to make the date a column
-    data.reset_index(inplace=True)
+    data.reset_index(inplace=True) # type: ignore
     print("Column names after reset_index:")
-    print(data.columns)
+    print(data.columns) # type: ignore
     
     # Create the candlestick chart using Plotly with MultiIndex columns
     fig = go.Figure(data=[go.Candlestick(
-        x=data[('Datetime', '')],
-        open=data[('Open', company_name)],
-        high=data[('High', company_name)],
-        low=data[('Low', company_name)],
-        close=data[('Close', company_name)],
+        x=data[('Datetime', '')], # type: ignore
+        open=data[('Open', company_name)], # type: ignore
+        high=data[('High', company_name)], # type: ignore
+        low=data[('Low', company_name)], # type: ignore
+        close=data[('Close', company_name)], # type: ignore
         name=company_name
     )])
 

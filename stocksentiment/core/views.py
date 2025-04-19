@@ -1,52 +1,38 @@
 import logging
+import os
 import random
 import time
-from django.db import DatabaseError, connection
-from django.shortcuts import render,HttpResponse
-from django.urls import reverse
-import feedparser
-import requests
-from .scripts import fetch_analyze as fa
-from .models import CompanySentiment, StockPrediction, StockPrediction, DailyPoll, PollOption, Vote, favourite
-from django.http import JsonResponse
-from django.utils.timezone import now
-from datetime import datetime, timedelta
-from django.utils import timezone
-import joblib
-import numpy as np
-import pandas as pd
-import os
-from django.views.decorators.csrf import csrf_exempt
-import json
-import pandas as pd
-from django.utils.timezone import now
-from django.db.models import F
-import yfinance as yf
-from plotly.utils import PlotlyJSONEncoder
-import plotly.graph_objects as go
-import traceback
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.http import require_GET
-from django.http import StreamingHttpResponse
-from statsmodels.tsa.arima.model import ARIMA
-from django.views.decorators.cache import cache_page
-from django.core.cache import cache
-from stocksentiment.settings import CACHE_TIMEOUT_MEDIUM, CACHE_TIMEOUT_LONG, CACHE_TIMEOUT_SHORT
 import uuid
 import json
+import traceback
+from datetime import datetime, timedelta
+import numpy as np
+import pandas as pd
+import requests
+import feedparser
+import yfinance as yf
+import plotly.graph_objects as go
+from plotly.utils import PlotlyJSONEncoder
+from statsmodels.tsa.arima.model import ARIMA
+from django.db import DatabaseError, connection
+from django.db.models import F
+from django.shortcuts import render, HttpResponse
+from django.http import JsonResponse, StreamingHttpResponse
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods, require_GET
+from django.views.decorators.cache import cache_page
+from django.core.cache import cache
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth import login
-from .models import Viewer
-import yfinance as yf
-import plotly.graph_objects as go
-import pandas as pd
-import json
-import traceback
-from plotly.utils import PlotlyJSONEncoder
-from django.http import JsonResponse
-from django.shortcuts import render
+import joblib
+from .scripts import fetch_analyze as fa
+from .models import *
+from stocksentiment.settings import CACHE_TIMEOUT_SHORT, CACHE_TIMEOUT_MEDIUM, CACHE_TIMEOUT_LONG
+
 
 company_tickers = [
     'META',         # Meta
@@ -156,6 +142,7 @@ def get_model_3():
 
 @csrf_exempt
 def predict_all_stock_prices(request):  # sourcery skip: low-code-quality
+
     if request.method != 'GET':
         return JsonResponse({'error': 'Only GET method allowed'}, status=405)
 

@@ -112,8 +112,7 @@ def get_stock_data_on_date(ticker_symbol, date_str):
 
 # Example usage
 if __name__ == "__main__":
-#     data = get_stock_data_on_date("TCS.NS", "2024-04-12")
-#     print(data)
+
 
     company = "TCS.NS"
 

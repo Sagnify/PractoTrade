@@ -25,9 +25,9 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_GET
 from django.http import StreamingHttpResponse
 from statsmodels.tsa.arima.model import ARIMA
-from django.views.decorators.cache import cache_page
-from django.core.cache import cache
-from stocksentiment.settings import CACHE_TIMEOUT_MEDIUM, CACHE_TIMEOUT_LONG, CACHE_TIMEOUT_SHORT
+# from django.views.decorators.cache import cache_page
+# from django.core.cache import cache
+# from stocksentiment.settings import CACHE_TIMEOUT_MEDIUM, CACHE_TIMEOUT_LONG, CACHE_TIMEOUT_SHORT
 
 
 
@@ -408,7 +408,7 @@ def get_last_close_price(company_name):
 
 
 @csrf_exempt
-@cache_page(CACHE_TIMEOUT_MEDIUM)  # Cache for 1 hour
+# @cache_page(CACHE_TIMEOUT_MEDIUM)  # Cache for 1 hour
 def get_predicted_stock_price(request, company_name):
     if request.method != 'GET':
         return JsonResponse({'error': 'Invalid request method'}, status=405)

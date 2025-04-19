@@ -167,18 +167,18 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
 
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-        "KEY_PREFIX": "stockapi",
-    }
-}
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": "redis://127.0.0.1:6379/1",
+#         "OPTIONS": {
+#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#         },
+#         "KEY_PREFIX": "stockapi",
+#     }
+# }
 
-# Cache timeouts (in seconds)
-CACHE_TIMEOUT_SHORT = 60 * 5  # 5 minutes for real-time data
-CACHE_TIMEOUT_MEDIUM = 60 * 60  # 1 hour for predictions
-CACHE_TIMEOUT_LONG = 60 * 60 * 6  # 6 hours for less volatile data
+# # Cache timeouts (in seconds)
+# CACHE_TIMEOUT_SHORT = 60 * 5  # 5 minutes for real-time data
+# CACHE_TIMEOUT_MEDIUM = 60 * 60  # 1 hour for predictions
+# CACHE_TIMEOUT_LONG = 60 * 60 * 6  # 6 hours for less volatile data

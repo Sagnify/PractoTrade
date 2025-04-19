@@ -427,13 +427,14 @@ def get_predicted_stock_price(request, company_name):
 
         # Dummy companies list with necessary info only
         dummy_companies = {
-            'AMZN': {'ticker': 'AMZN', 'name': 'Amazon'},
-            'GOOGL': {'ticker': 'GOOGL', 'name': 'Alphabet'},
-            'NVDA': {'ticker': 'NVDA', 'name': 'NVIDIA'},
-            'ITC': {'ticker': 'ITC.NS', 'name': 'ITC'},
-            'LT': {'ticker': 'LT.NS', 'name': 'Larsen & Toubro'},
-            'BAJFINANCE': {'ticker': 'BAJFINANCE.NS', 'name': 'Bajaj Finance'},
+            'AMZN': {'ticker': 'AMZN', 'name': 'Amazon', 'is_in': False},
+            'GOOGL': {'ticker': 'GOOGL', 'name': 'Alphabet', 'is_in': False},
+            'NVDA': {'ticker': 'NVDA', 'name': 'NVIDIA', 'is_in': False},
+            'ITC': {'ticker': 'ITC.NS', 'name': 'ITC', 'is_in': True},
+            'LT': {'ticker': 'LT.NS', 'name': 'Larsen & Toubro', 'is_in': True},
+            'BAJFINANCE': {'ticker': 'BAJFINANCE.NS', 'name': 'Bajaj Finance', 'is_in': True},
         }
+
 
         # If prediction not found, but is a dummy company, return dummy data
         if not prediction and company_name in dummy_companies:

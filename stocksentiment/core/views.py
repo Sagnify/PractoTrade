@@ -423,10 +423,18 @@ def get_last_close_price(company_name):
 
 
 @csrf_exempt
-@cache_page(CACHE_TIMEOUT_MEDIUM)  # Cache for 1 hour
 def get_predicted_stock_price(request, company_name):
     if request.method != 'GET':
         return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+    # Create a cache key based on the company name
+    cache_key = f"predicted_stock_price_{company_name}"
+    
+    # Try to get cached response
+    cached_response = cache.get(cache_key)
+    if cached_response:
+        print(f"Returning cached prediction data for {company_name}")
+        return JsonResponse(cached_response, status=200)
 
     try:
         # Try to fetch prediction from DB
@@ -450,6 +458,7 @@ def get_predicted_stock_price(request, company_name):
             'BAJFINANCE': {'ticker': 'BAJFINANCE.NS', 'name': 'Bajaj Finance', 'is_in': True},
         }
 
+        response_data = {}
 
         # If prediction not found, but is a dummy company, return dummy data
         if not prediction and company_name in dummy_companies:
@@ -459,7 +468,7 @@ def get_predicted_stock_price(request, company_name):
             percentage_change = round((avg_price - dummy_price_1) / dummy_price_1 * 100, 2)
             direction = 'up' if percentage_change > 0 else 'down'
 
-            return JsonResponse({
+            response_data = {
                 'company': company_name,
                 'isIn': dummy_companies[company_name]['is_in'],
                 'predicted_with_sentiment': dummy_price_1,
@@ -469,40 +478,44 @@ def get_predicted_stock_price(request, company_name):
                 'predicted_percentage_change': percentage_change,
                 'direction': direction,
                 'api_links': candle_urls,
-            }, status=200)
+            }
 
         elif not prediction:
             return JsonResponse({'error': 'Prediction not found for this company'}, status=404)
+        else:
+            # If real prediction exists
+            response_data = {
+                'company': company_name,
+                'isIn': prediction.is_in,
+                'predicted_with_sentiment': round(float(prediction.predicted_price_with_sentiment), 2),
+                'predicted_without_sentiment': round(float(prediction.predicted_price_without_sentiment), 2),
+                'arima_pred': round(float(prediction.predicted_price_with_arima), 2),
+                'avg_predicted_price': round(float(prediction.avg_predicted_price), 2),
+                'prediction_time': prediction.prediction_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'predicted_percentage_change': round(float(prediction.predicted_percentage_change), 2),
+                'direction': prediction.direction,
+                'api_links': candle_urls,
+            }
 
-        # If real prediction exists
-        return JsonResponse({
-            'company': company_name,
-            'isIn': prediction.is_in,
-            'predicted_with_sentiment': round(float(prediction.predicted_price_with_sentiment), 2),
-            'predicted_without_sentiment': round(float(prediction.predicted_price_without_sentiment), 2),
-            'arima_pred': round(float(prediction.predicted_price_with_arima), 2),
-            'avg_predicted_price': round(float(prediction.avg_predicted_price), 2),
-            'prediction_time': prediction.prediction_time.strftime('%Y-%m-%d %H:%M:%S'),
-            'predicted_percentage_change': round(float(prediction.predicted_percentage_change), 2),
-            'direction': prediction.direction,
-            'api_links': candle_urls,
-        }, status=200)
+        # Cache the response data
+        cache.set(cache_key, response_data, timeout=CACHE_TIMEOUT_MEDIUM)
+        print(f"Cached prediction data for {company_name} for {CACHE_TIMEOUT_MEDIUM} seconds")
+        
+        return JsonResponse(response_data, status=200)
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-
 @csrf_exempt
 def stock_chart_api(request):  # sourcery skip: low-code-quality
     """
-    API endpoint to generate stock candlestick charts.
+    API endpoint to generate stock candlestick charts with caching.
     Query parameters:
     - company: Stock ticker symbol (e.g., 'TCS.NS', 'AAPL')
     - interval: Time interval ('realtime', '1d', '7d')
     
     Returns a JSON response with the plotly chart data.
     """
-
     
     # Get query parameters
     company = request.GET.get('company', 'TCS.NS')
@@ -510,16 +523,29 @@ def stock_chart_api(request):  # sourcery skip: low-code-quality
     
     print(f"Received request for {company} with interval {interval}")
     
+    # Create a cache key based on the company and interval
+    cache_key = f"stock_chart_{company}_{interval}"
+    
+    # Try to get cached data
+    cached_response = cache.get(cache_key)
+    if cached_response:
+        print(f"Returning cached data for {company} with interval {interval}")
+        return JsonResponse(cached_response)
+    
     # Set yfinance parameters based on the requested interval
     if interval == 'realtime':
         period = '1d'
         yf_interval = '1m'
+        # Short cache timeout for realtime data
+        cache_timeout = 60  # 1 minute
     elif interval == '1d':
         period = '1d'
         yf_interval = '5m'
+        cache_timeout = 300  # 5 minutes
     elif interval == '7d':
         period = '7d'
         yf_interval = '1h'
+        cache_timeout = 3600  # 1 hour
     else:
         return JsonResponse({'error': 'Invalid interval. Choose from: realtime, 1d, 7d'}, status=400)
     
@@ -630,12 +656,19 @@ def stock_chart_api(request):  # sourcery skip: low-code-quality
         print(f"JSON chart data length: {len(json.dumps(chart_data))}")
         print(f"Number of data points in chart: {len(chart_data.get('data', [{}])[0].get('x', []))}")
         
-        return JsonResponse({
+        # Prepare response data
+        response_data = {
             'company': company,
             'interval': interval,
             'chart_data': chart_data,
             'data_points': len(datetime_values)
-        })
+        }
+        
+        # Cache the response
+        cache.set(cache_key, response_data, timeout=cache_timeout)
+        print(f"Cached chart data for {company} with interval {interval} for {cache_timeout} seconds")
+        
+        return JsonResponse(response_data)
         
     except Exception as e:
         print(f"Error processing request: {str(e)}")
@@ -665,6 +698,15 @@ def company_list(request):
             if not viewer_id:
                 return JsonResponse({'error': 'Viewer ID is required'}, status=400)
 
+            # Create a cache key specific to this viewer
+            cache_key = f"company_list_{viewer_id}"
+            
+            # Try to get cached response
+            cached_companies = cache.get(cache_key)
+            if cached_companies:
+                print(f"Returning cached company list for viewer {viewer_id}")
+                return JsonResponse({'companies': cached_companies}, status=200)
+
             # Fetch the viewer object
             viewer = Viewer.objects.get(viewer_id=viewer_id)
 
@@ -677,7 +719,7 @@ def company_list(request):
                 'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft', 'is_fav': False, 'is_in': False, 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.'},
                 'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services', 'is_fav': False, 'is_in': True, 'description': 'TCS is a leading global IT services and consulting company from India.'},
                 'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys', 'is_fav': False, 'is_in': True, 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.'},
-                'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'is_fav': False, 'is_in': True, 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.'},
+                'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'is_fav': False, 'is_in': True, 'description': 'HDFC Bank is one of India`s largest private sector banks offering a wide range of financial services.'},
                 'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries', 'is_fav': False, 'is_in': True, 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.'},
                 'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro', 'is_fav': False, 'is_in': True, 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.'},
                 'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever', 'is_fav': False, 'is_in': True, 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.'},
@@ -693,12 +735,16 @@ def company_list(request):
                 'BAJFINANCE': {'ticker': 'BAJFINANCE.NS', 'name': 'Bajaj Finance', 'is_fav': False, 'is_in': True, 'description': 'Bajaj Finance provides a range of financial services including loans, insurance, and investment products.'}
             }
 
-
             # Update 'is_fav' for each company based on user's favourites
             for company in companies.values():
                 if company['ticker'] in user_favourites:
                     company['is_fav'] = True
 
+            # Cache the results
+            # Use a shorter timeout since favorites can change
+            cache.set(cache_key, companies, timeout=CACHE_TIMEOUT_LONG)  # 10 minutes
+            print(f"Cached company list for viewer {viewer_id} for 600 seconds")
+            
             return JsonResponse({'companies': companies}, status=200)
 
         except Viewer.DoesNotExist:
@@ -707,8 +753,6 @@ def company_list(request):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
-
-
 
 
 def search(request):
@@ -754,6 +798,15 @@ def reddit_post_fetcher_by_company(request):
     ticker = request.GET.get('ticker', '').upper()
     if not ticker:
         return JsonResponse({'error': 'Ticker is required'}, status=400)
+    
+    # Create a cache key for this ticker
+    cache_key = f"reddit_posts_{ticker}"
+    
+    # Try to get cached data
+    cached_posts = cache.get(cache_key)
+    if cached_posts:
+        print(f"Returning cached Reddit posts for {ticker}")
+        return JsonResponse({'ticker': ticker, 'post_links': cached_posts})
 
     hardcoded_posts = {
         'META': [
@@ -817,15 +870,16 @@ def reddit_post_fetcher_by_company(request):
     "https://reddit.com/r/investing/comments/9cvx7w/understanding_fund_movements/",
     "https://reddit.com/r/investing/comments/190yy5/what_will_cancun_tell_us_about_zincs_year_ahead/"
         ],
-
     }
 
     if ticker not in hardcoded_posts:
         return JsonResponse({'error': 'Ticker not supported'}, status=400)
 
+    # Cache the posts for this ticker - using a longer timeout since these are hardcoded values
+    cache.set(cache_key, hardcoded_posts[ticker], timeout=CACHE_TIMEOUT_LONG)
+    print(f"Cached Reddit posts for {ticker} for {CACHE_TIMEOUT_LONG} seconds")
+    
     return JsonResponse({'ticker': ticker, 'post_links': hardcoded_posts[ticker]})
-
-
 
 COMPANY_LIST = [
     'META', 'TSLA', 'MSFT', 'TCS.NS', 'INFY.NS', 'HDFCBANK.NS', 'RELIANCE.NS', 'WIPRO.NS',

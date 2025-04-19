@@ -79,6 +79,20 @@ def sentiment_analysis(self, company: str) -> dict:
 
 
 
+
+@shared_task(bind=True, name="core.tasks.company_wise_sentiment_analysis")
+def company_wise_sentiment_analysis(self):
+    results = {}
+    for company in company_tickers:
+        # Call directly instead of using .delay()
+        results[company] = sentiment_analysis(company)  
+    return results
+
+
+
+
+
+
 # @shared_task(bind=True, name="core.tasks.company_wise_sentiment_analysis")
 # def company_wise_sentiment_analysis(self):
 
@@ -90,16 +104,3 @@ def sentiment_analysis(self, company: str) -> dict:
 #         results[company] = result.get()
 
 #     return results
-
-
-
-@shared_task(bind=True, name="core.tasks.company_wise_sentiment_analysis")
-def company_wise_sentiment_analysis(self):
-    results = {}
-    for company in company_tickers:
-        # Call directly instead of using .delay()
-        results[company] = sentiment_analysis(company)  
-    return results
-
-
-    

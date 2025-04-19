@@ -52,13 +52,11 @@ company_tickers = [
     'META',         # Meta
     'TSLA',         # Tesla
     'MSFT',         # Microsoft
-
     'TCS.NS',       # Tata Consultancy Services
     'INFY.NS',      # Infosys
     'HDFCBANK.NS',  # HDFC Bank
     'RELIANCE.NS',  # Reliance Industries
     'WIPRO.NS',     # Wipro
-    # 'ITCLTD.NS',    # ITC
     'HINDUNILVR.NS' # Hindustan Unilever
 ]
 
@@ -155,9 +153,6 @@ def get_model_3():
         get_model_3._model = joblib.load(MODEL_PATH_3)
     return get_model_3._model
 
-# Usage example
-# model = get_model_1()
-# model_2 = get_model_2()
 
 @csrf_exempt
 def predict_all_stock_prices(request):  # sourcery skip: low-code-quality
@@ -381,47 +376,6 @@ def get_last_close_price(company_name):
     except Exception as e:
         print(f"Error getting last close price for {company_name}: {str(e)}")
         return None
-
-
-
-# @csrf_exempt
-# def get_predicted_stock_price(request, company_name):
-#     if request.method != 'GET':
-#         return
-
-#     try:
-#         # Get the latest prediction for the company
-#         prediction = StockPrediction.objects.filter(company_name=company_name).order_by('-prediction_time').first()
-
-#         if not prediction:
-#             return JsonResponse({'error': 'Prediction not found for this company'}, status=404)
-
-#         # Build the base URL
-#         base_url = request.build_absolute_uri('/')[:-1]  # removes trailing slash
-
-#         # API links for different periods
-#         candle_urls = {
-#             'realtime': f"{base_url}/api/stock-chart/?company={company_name}&interval=realtime",
-#             '1d': f"{base_url}/api/stock-chart/?company={company_name}&interval=1d",
-#             '7d': f"{base_url}/api/stock-chart/?company={company_name}&interval=7d",
-#         }
-
-#         # Return the predicted information along with the API links
-#         return JsonResponse({
-#             'company': company_name,
-#             'predicted_with_sentiment': round(float(prediction.predicted_price_with_sentiment), 2),
-#             'predicted_without_sentiment': round(float(prediction.predicted_price_without_sentiment), 2),
-#             'avg_predicted_price': round(float(prediction.avg_predicted_price), 2),
-#             'prediction_time': prediction.prediction_time.strftime('%Y-%m-%d %H:%M:%S'),
-#             'predicted_percentage_change': round(float(prediction.predicted_percentage_change), 2),
-#             'direction': prediction.direction,
-#             'api_links': candle_urls,
-#         }
-#         , status=200)
-
-#     except Exception as e:
-#         return JsonResponse({'error': str(e)}, status=500)
-
 
 
 @csrf_exempt
@@ -801,9 +755,9 @@ def search(request):
     # Perform the search
     results = [
         {
-            'company_name': key,
-            'api_url': f"{base_url}{reverse('get_predicted_stock_price', args=[key])}?viewer_id={viewer_id}",
-         }
+            'company_name': value['ticker'],
+            'api_url': f"{base_url}{reverse('get_predicted_stock_price', args=[value['ticker']])}?viewer_id={viewer_id}",
+        }
         for key, value in companies.items()
         if search_term.lower() in key.lower() or search_term.lower() in value['name'].lower()
     ]
@@ -811,6 +765,8 @@ def search(request):
         return JsonResponse({'message': 'No results found'}, status=404)
 
     return JsonResponse(list(results), safe=False, status=200)
+
+                    #  'api_url': f"{base_url}{reverse('get_predicted_stock_price', args=[key.ticker])}?viewer_id={viewer_id}",
 
 
 

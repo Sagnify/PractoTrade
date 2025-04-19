@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # 'rest_framework',
     'core',
     'corsheaders',
 ]
@@ -158,9 +157,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
-# CELERY_BROKER_URL = 'redis://127.0.0.1:6379'  # Update with your Redis server URL
-# CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379'
-
 CELERY_BROKER_URL = 'redis://default:OKmsmzf8rASGhRsmMdx3OJX3SVPWydMo@redis-11805.crce182.ap-south-1-1.ec2.redns.redis-cloud.com:11805/0'
 CELERY_RESULT_BACKEND = 'redis://default:OKmsmzf8rASGhRsmMdx3OJX3SVPWydMo@redis-11805.crce182.ap-south-1-1.ec2.redns.redis-cloud.com:11805/0'
 CELERY_ACCEPT_CONTENT = ['application/json']
@@ -169,24 +165,6 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_REDIS_BACKEND_OPTIONS = {
     'key_prefix': 'celery_results_'
 }
-
-
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": "redis://127.0.0.1:6379",
-#         "OPTIONS": {
-#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#         },
-#         "KEY_PREFIX": "stockapi",
-#     }
-# }
-
-# # Cache timeouts (in seconds)
-# CACHE_TIMEOUT_SHORT = 60 * 5  # 5 minutes for real-time data
-# CACHE_TIMEOUT_MEDIUM = 60 * 60  # 1 hour for predictions
-# CACHE_TIMEOUT_LONG = 60 * 60 * 6  # 6 hours for less volatile data
-
 
 
 # Cache configuration
@@ -208,4 +186,3 @@ CACHES = {
 CACHE_TIMEOUT_SHORT = 60 * 5       # 5 minutes for real-time data
 CACHE_TIMEOUT_MEDIUM = 60 * 60     # 1 hour for predictions
 CACHE_TIMEOUT_LONG = 60 * 60 * 6   # 6 hours for less volatile data
-# DEFAULT_CACHE_TIMEOUT = CACHE_TIMEOUT_MEDIUM  # Default fallback

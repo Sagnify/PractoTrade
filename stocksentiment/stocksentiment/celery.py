@@ -37,10 +37,3 @@ app.conf.beat_schedule = {
 }
 
 
-# app.conf.beat_schedule = {
-#     'analyze-every-6-hours': {
-#         'task': 'core.tasks.sentiment_analysis',
-#         'schedule': timedelta(seconds=20),
-#         'args': ("TCS.NS",),  # Default company
-#     },
-# }

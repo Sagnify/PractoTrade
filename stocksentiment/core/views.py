@@ -1,4 +1,6 @@
+import logging
 import random
+import time
 from django.shortcuts import render,HttpResponse
 import feedparser
 import requests
@@ -926,33 +928,99 @@ def company_poll_api(request, company_name):
 #     return JsonResponse({'news': all_articles}, safe=False)
 
 
+# Configure logging
+logger = logging.getLogger(__name__)
+REQUEST_TIMEOUT = 5
+MAX_RETRIES = 2
 
 @csrf_exempt
 @require_GET
-def all_company_news(request):
-
+def all_company_news(request):  # sourcery skip: low-code-quality
+    """
+    Fetch news articles for all companies from Google News RSS.
+    Includes error handling, timeouts, and detailed logging.
+    """
     cache_key = "all_company_news"
     cached_news = cache.get(cache_key)
     
     if cached_news:
+        logger.info("Returning cached news results")
         return JsonResponse({'news': cached_news}, safe=False)
     
+    logger.info("Cache miss for all_company_news - fetching fresh data")
     all_articles = []
-    for company in COMPANY_LIST:
-        rss_url = f"https://news.google.com/rss/search?q={company}"
-        feed = feedparser.parse(rss_url)
-        articles = [
-            {
-                'company': company,
-                'title': entry.title,
-                'url': entry.link
-            }
-            for entry in feed.entries[:10]
-        ]
-        all_articles.extend(articles)
+    errors = []
     
-    cache.set(cache_key, all_articles, timeout=CACHE_TIMEOUT_MEDIUM)
-    return JsonResponse({'news': all_articles}, safe=False)
+    for company in COMPANY_LIST:
+        try:
+            logger.debug(f"Fetching news for company: {company}")
+            start_time = time.time()
+            
+            # Construct URL with company name properly encoded
+            from urllib.parse import quote_plus
+            company_encoded = quote_plus(company)
+            rss_url = f"https://news.google.com/rss/search?q={company_encoded}"
+            
+            # Set up feedparser with timeout using requests
+            try:
+                # Try with requests first for better timeout control
+                response = requests.get(rss_url, timeout=REQUEST_TIMEOUT)
+                response.raise_for_status()  # Raise exception for 4XX/5XX responses
+                
+                # Use the response content with feedparser
+                feed = feedparser.parse(response.content)
+            except (requests.RequestException, requests.Timeout) as req_error:
+                logger.warning(f"Request error for {company}: {req_error}")
+                # Fall back to direct feedparser (less timeout control)
+                feed = feedparser.parse(rss_url)
+            
+            # Check if the feed has entries and wasn't an error
+            if hasattr(feed, 'entries') and feed.entries and not feed.get('bozo_exception'):
+                articles = []
+                for entry in feed.entries[:10]:
+                    try:
+                        article = {
+                            'company': company,
+                            'title': entry.title,
+                            'url': entry.link
+                        }
+                        articles.append(article)
+                    except AttributeError as e:
+                        logger.error(f"Error processing entry for {company}: {e}")
+                        continue
+                
+                all_articles.extend(articles)
+                elapsed = time.time() - start_time
+                logger.debug(f"Processed {len(articles)} articles for {company} in {elapsed:.2f}s")
+            else:
+                error_msg = f"No valid entries found for {company}"
+                if hasattr(feed, 'bozo_exception'):
+                    error_msg += f": {feed.bozo_exception}"
+                logger.warning(error_msg)
+                errors.append(error_msg)
+                
+        except Exception as e:
+            logger.exception(f"Unexpected error processing {company}: {str(e)}")
+            errors.append(f"Error for {company}: {str(e)}")
+            continue
+    
+    # If we got at least some articles, cache them
+    if all_articles:
+        logger.info(f"Caching {len(all_articles)} news articles for {CACHE_TIMEOUT_MEDIUM}s")
+        cache.set(cache_key, all_articles, timeout=CACHE_TIMEOUT_MEDIUM)
+        
+        # If there were some errors but we have some results, log the errors
+        if errors:
+            logger.warning(f"Completed with {len(errors)} errors: {', '.join(errors)}")
+        
+        return JsonResponse({'news': all_articles}, safe=False)
+    else:
+        # If no articles were found at all, return an error
+        error_message = "Failed to fetch news for any companies"
+        logger.error(error_message)
+        if errors:
+            error_message += f": {', '.join(errors)}"
+        return JsonResponse({'error': error_message}, status=500)
 
 
 

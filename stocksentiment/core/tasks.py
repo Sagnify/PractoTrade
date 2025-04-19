@@ -11,14 +11,11 @@ company_tickers = [
     'META',        # Meta (formerly Facebook)
     'TSLA',        # Tesla
     'MSFT',        # Microsoft
-    # 'GOOGL',       # Google (Alphabet Inc.)
-    # 'AAPL',        # Apple
     'TCS.NS',      # Tata Consultancy Services
     'INFY.NS',     # Infosys
     'HDFCBANK.NS', # HDFC Bank
     'RELIANCE.NS', # Reliance Industries
     'WIPRO.NS',     # Wipro
-    # 'ITCLTD.NS',  # ITC Limited
     'HINDUNILVR.NS', # Hindustan Unilever
 ]
 
@@ -82,16 +79,27 @@ def sentiment_analysis(self, company: str) -> dict:
 
 
 
+# @shared_task(bind=True, name="core.tasks.company_wise_sentiment_analysis")
+# def company_wise_sentiment_analysis(self):
+
+#     results = {}
+#     for company in company_tickers:
+#         # result = sentiment_analysis(company)
+#         result = sentiment_analysis.delay(company) # type: ignore
+#         # results[company] = result
+#         results[company] = result.get()
+
+#     return results
+
+
+
 @shared_task(bind=True, name="core.tasks.company_wise_sentiment_analysis")
 def company_wise_sentiment_analysis(self):
-
     results = {}
     for company in company_tickers:
-        # result = sentiment_analysis(company)
-        result = sentiment_analysis.delay(company) # type: ignore
-        results[company] = result
-
+        # Call directly instead of using .delay()
+        results[company] = sentiment_analysis(company)  
     return results
 
 
-
+    

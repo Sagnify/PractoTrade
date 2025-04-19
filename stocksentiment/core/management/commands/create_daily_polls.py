@@ -13,8 +13,8 @@ QUESTION_TEMPLATES = [
 OPTION_CHOICES = ['Bullish', 'Bearish', 'Neutral']
 
 COMPANY_LIST = [
-    'META', 'TSLA', 'MSFT', 'TCS', 'INFY', 'HDFCBANK', 'RELIANCE', 'WIPRO',
-    'HINDUNILVR', 'AMZN', 'GOOGL', 'NVDA', 'ITC', 'LT', 'BAJFINANCE'
+    'META', 'TSLA', 'MSFT', 'TCS.NS', 'INFY.NS', 'HDFCBANK.NS', 'RELIANCE.NS', 'WIPRO.NS',
+    'HINDUNILVR.NS', 'AMZN', 'GOOGL', 'NVDA', 'ITC.NS', 'LT.NS', 'BAJFINANCE.NS'
 ]
 
 class Command(BaseCommand):

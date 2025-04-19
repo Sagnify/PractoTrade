@@ -30,5 +30,6 @@ urlpatterns = [
     path('api/company-poll/<str:company_name>/', cv.company_poll_api), # type: ignore
     path('api/news/all/', cv.all_company_news, name='all_company_news'),
     path('api/signup/', cv.signup_view, name='signup'),
-    path('api/login/', cv.login_view, name='login')
+    path('api/login/', cv.login_view, name='login'),
+    path('api/search/', cv.search, name='search'), # type: ignore
 ]

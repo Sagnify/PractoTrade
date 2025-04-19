@@ -553,6 +553,44 @@ def company_list(request):
 
     return JsonResponse({'companies': companies})
 
+
+
+
+def search(request):
+
+
+    companies = {
+    'META': {'ticker': 'META', 'name': 'Meta', 'is_in': False, 'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.'},
+    'TSLA': {'ticker': 'TSLA', 'name': 'Tesla', 'is_in': False, 'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.'},
+    'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft', 'is_in': False, 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.'},
+    'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services', 'is_in': True, 'description': 'TCS is a leading global IT services and consulting company from India.'},
+    'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys', 'is_in': True, 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.'},
+    'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'is_in': True, 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.'},
+    'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries', 'is_in': True, 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.'},
+    'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro', 'is_in': True, 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.'},
+    'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever', 'is_in': True, 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.'},
+
+    }
+
+    if request.method == 'GET':
+        search_term = request.GET.get('search', '').strip()
+        if not search_term:
+            return JsonResponse({'error': 'Search term is required'}, status=400)
+
+        # Perform the search
+        results = [
+            {'company_name': key}
+            for key, value in companies.items()
+            if search_term.lower() in key.lower() or search_term.lower() in value['name'].lower()
+        ]
+        if not results:
+            return JsonResponse({'message': 'No results found'}, status=404)
+
+        return JsonResponse(list(results), safe=False, status=200)
+
+
+
+
 @csrf_exempt
 def reddit_post_fetcher_by_company(request):
     if request.method != 'GET':
@@ -739,7 +777,7 @@ def all_company_news(request):
                 first = False
         yield ']'  # End of JSON array
 
-    return StreamingHttpResponse(stream_news(), content_type='application/json')
+    return StreamingHttpResponse(stream_news(), content_type='application/json') # type: ignore
 
 
 import uuid
@@ -819,4 +857,5 @@ def login_view(request):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 

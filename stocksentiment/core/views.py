@@ -1,7 +1,9 @@
 import logging
 import random
 import time
+from django.db import DatabaseError, connection
 from django.shortcuts import render,HttpResponse
+from django.urls import reverse
 import feedparser
 import requests
 from .scripts import fetch_analyze as fa
@@ -426,6 +428,12 @@ def get_last_close_price(company_name):
 def get_predicted_stock_price(request, company_name):
     if request.method != 'GET':
         return JsonResponse({'error': 'Invalid request method'}, status=405)
+    
+    viewer_id = request.GET.get('viewer_id')
+    if not viewer_id:
+        return JsonResponse({'error': 'Viewer ID is required'}, status=400)
+    
+    viewer = Viewer.objects.get(viewer_id=viewer_id)
 
     # Create a cache key based on the company name
     cache_key = f"predicted_stock_price_{company_name}"
@@ -439,6 +447,7 @@ def get_predicted_stock_price(request, company_name):
     try:
         # Try to fetch prediction from DB
         prediction = StockPrediction.objects.filter(company_name=company_name).order_by('-prediction_time').first()
+        user_favourites = favourite.objects.filter(user=viewer).values_list('company_name', flat=True)
 
         # Build the base URL for API links
         base_url = request.build_absolute_uri('/')[:-1]  # removes trailing slash
@@ -478,6 +487,7 @@ def get_predicted_stock_price(request, company_name):
                 'predicted_percentage_change': percentage_change,
                 'direction': direction,
                 'api_links': candle_urls,
+                'is_fav': company_name in user_favourites
             }
 
         elif not prediction:
@@ -495,6 +505,7 @@ def get_predicted_stock_price(request, company_name):
                 'predicted_percentage_change': round(float(prediction.predicted_percentage_change), 2),
                 'direction': prediction.direction,
                 'api_links': candle_urls,
+                'is_fav': company_name in user_favourites
             }
 
         # Cache the response data
@@ -758,34 +769,48 @@ def company_list(request):
 def search(request):
 
 
-    if request.method == 'GET':
-        search_term = request.GET.get('search', '').strip()
-        if not search_term:
-            return JsonResponse({'error': 'Search term is required'}, status=400)
+    if request.method != 'GET':
+        return
+    search_term = request.GET.get('search', '').strip()
+    viewer_id = request.GET.get('viewer_id', '').strip()
+    if not search_term and not viewer_id:
+        return JsonResponse({'error': 'Search term is required'}, status=400)
 
-        companies = {
-            'META': {'ticker': 'META', 'name': 'Meta', 'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.', 'is_in': False},
-            'TSLA': {'ticker': 'TSLA', 'name': 'Tesla', 'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.', 'is_in': False},
-            'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft', 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.', 'is_in': False},
-            'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services', 'description': 'TCS is a leading global IT services and consulting company from India.', 'is_in': True},
-            'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys', 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.', 'is_in': True},
-            'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.', 'is_in': True},
-            'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries', 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.', 'is_in': True},
-            'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro', 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.', 'is_in': True},
-            'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever', 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.', 'is_in': True},
-        }
+    viewer = Viewer.objects.get(viewer_id=viewer_id)
 
+    base_url = request.build_absolute_uri('/')[:-1] # removes trailing slash
 
-        # Perform the search
-        results = [
-            {'company_name': key}
-            for key, value in companies.items()
-            if search_term.lower() in key.lower() or search_term.lower() in value['name'].lower()
-        ]
-        if not results:
-            return JsonResponse({'message': 'No results found'}, status=404)
+    companies = {
+        'META': {'ticker': 'META', 'name': 'Meta', 'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.', 'is_in': False, 'is_fav': False, },
+        'TSLA': {'ticker': 'TSLA', 'name': 'Tesla', 'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.', 'is_in': False,  'is_fav': False, },
+        'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft', 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.', 'is_in': False, 'is_fav': False, },
+        'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services', 'description': 'TCS is a leading global IT services and consulting company from India.', 'is_in': True,  'is_fav': False, },
+        'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys', 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.', 'is_in': True,  'is_fav': False, },
+        'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.', 'is_in': True,  'is_fav': False, },
+        'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries', 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.', 'is_in': True,  'is_fav': False, },
+        'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro', 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.', 'is_in': True, 'is_fav': False, },
+        'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever', 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.', 'is_in': True,  'is_fav': False, },
+    }
 
-        return JsonResponse(list(results), safe=False, status=200)
+    user_favourites = favourite.objects.filter(user=viewer).values_list('company_name', flat=True)
+
+    for company in companies.values():
+        if company['ticker'] in user_favourites:
+            company['is_fav'] = True
+
+    # Perform the search
+    results = [
+        {
+            'company_name': key,
+            'api_url': f"{base_url}{reverse('get_predicted_stock_price', args=[key])}?viewer_id={viewer_id}",
+         }
+        for key, value in companies.items()
+        if search_term.lower() in key.lower() or search_term.lower() in value['name'].lower()
+    ]
+    if not results:
+        return JsonResponse({'message': 'No results found'}, status=404)
+
+    return JsonResponse(list(results), safe=False, status=200)
 
 
 
@@ -886,8 +911,22 @@ COMPANY_LIST = [
     'HINDUNILVR.NS', 'AMZN', 'GOOGL', 'NVDA', 'ITC.NS', 'LT', 'BAJFINANCE'
 ]
 
-@csrf_exempt
-@require_http_methods(["GET", "POST"])
+def retry_database_operation(func, max_retries=3, delay=1):
+    """Retry a database operation with exponential backoff."""
+    import time
+    retries = 0
+    while retries < max_retries:
+        try:
+            return func()
+        except DatabaseError:
+            if retries == max_retries - 1:
+                raise
+            retries += 1
+            # Reset connection
+            connection.close()
+            # Exponential backoff
+            time.sleep(delay * (2 ** retries))
+
 def company_poll_api(request, company_name):
     today = timezone.now().date()
     company_name_upper = company_name.upper()
@@ -895,43 +934,69 @@ def company_poll_api(request, company_name):
     if company_name_upper not in COMPANY_LIST:
         return JsonResponse({'error': 'Company not found'}, status=404)
 
-    poll = DailyPoll.objects.filter(company_name=company_name_upper, created_at=today).first()
-    if not poll:
-        return JsonResponse({'error': 'Poll not available for today'}, status=404)
+    # Cache key for this specific company and date
+    cache_key = f"company_poll_{company_name_upper}_{today}"
 
     if request.method == 'GET':
-        options = poll.options.all() # type: ignore
-        total_votes = sum(opt.votes for opt in options)
+        # Try to get from cache first
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return JsonResponse(cached_data, status=200)
 
-        option_data = []
-        leading_option = None
-        max_votes = -1
+        # If not in cache, get from database
+        try:
+            def get_poll_data():
+                poll = DailyPoll.objects.filter(company_name=company_name_upper, created_at=today).first()
+                if not poll:
+                    return None
+                
+                options = poll.options.all()  # type: ignore
+                total_votes = sum(opt.votes for opt in options)
 
-        for opt in options:
-            percent = round((opt.votes / total_votes) * 100, 2) if total_votes > 0 else 0.0
-            option_data.append({
-                'id': opt.id,
-                'text': opt.option_text,
-                'votes': opt.votes,
-                'percentage': percent
-            })
+                option_data = []
+                leading_option = None
+                max_votes = -1
 
-            if opt.votes > max_votes:
-                leading_option = {
-                    'text': opt.option_text,
-                    'percentage': percent
+                for opt in options:
+                    percent = round((opt.votes / total_votes) * 100, 2) if total_votes > 0 else 0.0
+                    option_data.append({
+                        'id': opt.id,
+                        'text': opt.option_text,
+                        'votes': opt.votes,
+                        'percentage': percent
+                    })
+
+                    if opt.votes > max_votes:
+                        leading_option = {
+                            'text': opt.option_text,
+                            'percentage': percent
+                        }
+                        max_votes = opt.votes
+
+                return {
+                    'company': poll.company_name,
+                    'question': poll.question,
+                    'poll_id': poll.id,  # type: ignore
+                    'total_votes': total_votes,
+                    'options': option_data,
+                    'leading_sentiment': leading_option or {}
                 }
-                max_votes = opt.votes
 
-        return JsonResponse({
-            'company': poll.company_name,
-            'question': poll.question,
-            'poll_id': poll.id, # type: ignore
-            'total_votes': total_votes,
-            'options': option_data,
-            'leading_sentiment': leading_option or {}
-        }, status=200)
-
+            poll_data = retry_database_operation(get_poll_data)
+            
+            if poll_data is None:
+                return JsonResponse({'error': 'Poll not available for today'}, status=404)
+            
+            # Cache the result for 5 minutes (300 seconds)
+            cache.set(cache_key, poll_data, 300)
+            return JsonResponse(poll_data, status=200)
+            
+        except DatabaseError as e:
+            logger.error(f"Database error in GET poll: {str(e)}")
+            return JsonResponse({'error': 'Database connection error. Please try again later.'}, status=503)
+        except Exception as e:
+            logger.error(f"Unexpected error in GET poll: {str(e)}")
+            return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
 
     elif request.method == 'POST':
         try:
@@ -942,44 +1007,35 @@ def company_poll_api(request, company_name):
             if not session_id or not option_id:
                 return JsonResponse({'error': 'Missing session_id or option_id'}, status=400)
 
-            if Vote.objects.filter(poll=poll, session_id=session_id).exists():
-                return JsonResponse({'message': 'You have already voted today'}, status=403)
+            def submit_vote():
+                # Get the poll first
+                poll = DailyPoll.objects.filter(company_name=company_name_upper, created_at=today).first()
+                if not poll:
+                    return JsonResponse({'error': 'Poll not available for today'}, status=404)
 
-            option = PollOption.objects.get(id=option_id, poll=poll)
-            option.votes += 1
-            option.save()
+                if Vote.objects.filter(poll=poll, session_id=session_id).exists():
+                    return JsonResponse({'message': 'You have already voted today'}, status=403)
 
-            Vote.objects.create(poll=poll, option=option, session_id=session_id)
-            return JsonResponse({'message': 'Vote submitted successfully'}, status=200)
+                option = PollOption.objects.get(id=option_id, poll=poll)
+                option.votes += 1
+                option.save()
 
+                Vote.objects.create(poll=poll, option=option, session_id=session_id)
+                
+                # Invalidate cache after vote
+                cache.delete(cache_key)
+                
+                return JsonResponse({'message': 'Vote submitted successfully'}, status=200)
+
+            return retry_database_operation(submit_vote)
+
+        except DatabaseError as e:
+            logger.error(f"Database error in POST vote: {str(e)}")
+            return JsonResponse({'error': 'Database connection error. Please try again later.'}, status=503)
         except Exception as e:
+            logger.error(f"Unexpected error in POST vote: {str(e)}")
             return JsonResponse({'error': str(e)}, status=500)
 
-
-
-# COMPANY_LIST = [
-#     'META', 'TSLA', 'MSFT', 'TCS.NS', 'INFY.NS', 'HDFCBANK.NS', 'RELIANCE.NS', 'WIPRO.NS',
-#     'HINDUNILVR.NS', 'AMZN', 'GOOGL', 'NVDA', 'ITC.NS', 'LT', 'BAJFINANCE'
-# ]
-
-# @csrf_exempt
-# def all_company_news(request):
-#     all_articles = []
-
-#     for company in COMPANY_LIST:
-#         rss_url = f"https://news.google.com/rss/search?q={company}"
-#         feed = feedparser.parse(rss_url)
-#         articles = [
-#             {
-#                 'company': company,
-#                 'title': entry.title,
-#                 'url': entry.link
-#             }
-#             for entry in feed.entries[:10]
-#         ]
-#         all_articles.extend(articles)
-
-#     return JsonResponse({'news': all_articles}, safe=False)
 
 
 # Configure logging

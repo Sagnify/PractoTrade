@@ -421,7 +421,7 @@ def get_last_close_price(company_name):
 
 
 @csrf_exempt
-# @cache_page(CACHE_TIMEOUT_MEDIUM)  # Cache for 1 hour
+@cache_page(CACHE_TIMEOUT_MEDIUM)  # Cache for 1 hour
 def get_predicted_stock_price(request, company_name):
     if request.method != 'GET':
         return JsonResponse({'error': 'Invalid request method'}, status=405)

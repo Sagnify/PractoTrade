@@ -927,6 +927,7 @@ def retry_database_operation(func, max_retries=3, delay=1):
             # Exponential backoff
             time.sleep(delay * (2 ** retries))
 
+@csrf_exempt
 def company_poll_api(request, company_name):
     today = timezone.now().date()
     company_name_upper = company_name.upper()
@@ -1230,6 +1231,7 @@ def toggle_favourite(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+@csrf_exempt
 def get_favourites(request):
     if request.method == 'GET':
         try:

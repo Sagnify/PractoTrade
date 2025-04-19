@@ -2,3 +2,9 @@
 .env
 __pycache__/
 *.pyc
+
+
+# Ignore Docker-related files
+Dockerfile
+docker-compose.yml
+.dockerignore

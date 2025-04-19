@@ -25,6 +25,7 @@ class StockPrediction(models.Model):
     company_name = models.CharField(max_length=100)
     predicted_price_with_sentiment = models.FloatField()
     predicted_price_without_sentiment = models.FloatField()
+    predicted_price_with_arima = models.FloatField()
     avg_predicted_price = models.FloatField()
     prediction_time = models.DateTimeField()
     predicted_percentage_change = models.FloatField()

@@ -33,6 +33,7 @@ class StockPrediction(models.Model):
         ('up', 'Up'),
         ('down', 'Down')
     ])
+    is_in = models.BooleanField(default=False)  # True if the prediction is "in" the market
     # sentiment_score = models.FloatField()
     # prediction_interval = models.CharField(max_length=20)  # e.g., "Next 6 Hours"
 

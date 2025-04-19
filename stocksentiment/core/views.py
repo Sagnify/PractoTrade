@@ -459,6 +459,7 @@ def get_predicted_stock_price(request, company_name):
 
             return JsonResponse({
                 'company': company_name,
+                'is_in': dummy_companies[company_name]['is_in'],
                 'predicted_with_sentiment': dummy_price_1,
                 'predicted_without_sentiment': dummy_price_2,
                 'avg_predicted_price': avg_price,
@@ -474,6 +475,7 @@ def get_predicted_stock_price(request, company_name):
         # If real prediction exists
         return JsonResponse({
             'company': company_name,
+            'is_in': prediction.is_in,
             'predicted_with_sentiment': round(float(prediction.predicted_price_with_sentiment), 2),
             'predicted_without_sentiment': round(float(prediction.predicted_price_without_sentiment), 2),
             'arima_pred': round(float(prediction.predicted_price_with_arima), 2),

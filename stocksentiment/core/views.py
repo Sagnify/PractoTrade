@@ -421,7 +421,7 @@ def get_last_close_price(company_name):
 
 
 @csrf_exempt
-@cache_page(CACHE_TIMEOUT_MEDIUM)  # Cache for 1 hour
+# @cache_page(CACHE_TIMEOUT_MEDIUM)  # Cache for 1 hour
 def get_predicted_stock_price(request, company_name):
     if request.method != 'GET':
         return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -440,13 +440,14 @@ def get_predicted_stock_price(request, company_name):
 
         # Dummy companies list with necessary info only
         dummy_companies = {
-            'AMZN': {'ticker': 'AMZN', 'name': 'Amazon'},
-            'GOOGL': {'ticker': 'GOOGL', 'name': 'Alphabet'},
-            'NVDA': {'ticker': 'NVDA', 'name': 'NVIDIA'},
-            'ITC': {'ticker': 'ITC.NS', 'name': 'ITC'},
-            'LT': {'ticker': 'LT.NS', 'name': 'Larsen & Toubro'},
-            'BAJFINANCE': {'ticker': 'BAJFINANCE.NS', 'name': 'Bajaj Finance'},
+            'AMZN': {'ticker': 'AMZN', 'name': 'Amazon', 'is_in': False},
+            'GOOGL': {'ticker': 'GOOGL', 'name': 'Alphabet', 'is_in': False},
+            'NVDA': {'ticker': 'NVDA', 'name': 'NVIDIA', 'is_in': False},
+            'ITC': {'ticker': 'ITC.NS', 'name': 'ITC', 'is_in': True},
+            'LT': {'ticker': 'LT.NS', 'name': 'Larsen & Toubro', 'is_in': True},
+            'BAJFINANCE': {'ticker': 'BAJFINANCE.NS', 'name': 'Bajaj Finance', 'is_in': True},
         }
+
 
         # If prediction not found, but is a dummy company, return dummy data
         if not prediction and company_name in dummy_companies:
@@ -667,26 +668,27 @@ def company_list(request):
             user_favourites = favourite.objects.filter(user=viewer).values_list('company_name', flat=True)
 
             companies = {
-                'META': {'ticker': 'META', 'name': 'Meta', 'is_fav': False, 'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.'},
-                'TSLA': {'ticker': 'TSLA', 'name': 'Tesla', 'is_fav': False, 'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.'},
-                'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft', 'is_fav': False, 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.'},
-                'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services', 'is_fav': False, 'description': 'TCS is a leading global IT services and consulting company from India.'},
-                'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys', 'is_fav': False, 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.'},
-                'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'is_fav': False, 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.'},
-                'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries', 'is_fav': False, 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.'},
-                'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro', 'is_fav': False, 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.'},
-                'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever', 'is_fav': False, 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.'},
+                'META': {'ticker': 'META', 'name': 'Meta', 'is_fav': False, 'is_in': False, 'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.'},
+                'TSLA': {'ticker': 'TSLA', 'name': 'Tesla', 'is_fav': False, 'is_in': False, 'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.'},
+                'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft', 'is_fav': False, 'is_in': False, 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.'},
+                'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services', 'is_fav': False, 'is_in': True, 'description': 'TCS is a leading global IT services and consulting company from India.'},
+                'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys', 'is_fav': False, 'is_in': True, 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.'},
+                'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'is_fav': False, 'is_in': True, 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.'},
+                'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries', 'is_fav': False, 'is_in': True, 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.'},
+                'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro', 'is_fav': False, 'is_in': True, 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.'},
+                'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever', 'is_fav': False, 'is_in': True, 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.'},
 
                 # 🌍 Global Dummy Companies
-                'AMZN': {'ticker': 'AMZN', 'name': 'Amazon', 'is_fav': False, 'description': 'Amazon is a multinational technology company focusing on e-commerce, cloud computing, and AI.'},
-                'GOOGL': {'ticker': 'GOOGL', 'name': 'Alphabet', 'is_fav': False, 'description': 'Alphabet is the parent company of Google, focusing on internet services and products.'},
-                'NVDA': {'ticker': 'NVDA', 'name': 'NVIDIA', 'is_fav': False, 'description': 'NVIDIA designs GPUs for gaming and professional markets, and is a key player in AI.'},
+                'AMZN': {'ticker': 'AMZN', 'name': 'Amazon', 'is_fav': False, 'is_in': False, 'description': 'Amazon is a multinational technology company focusing on e-commerce, cloud computing, and AI.'},
+                'GOOGL': {'ticker': 'GOOGL', 'name': 'Alphabet', 'is_fav': False, 'is_in': False, 'description': 'Alphabet is the parent company of Google, focusing on internet services and products.'},
+                'NVDA': {'ticker': 'NVDA', 'name': 'NVIDIA', 'is_fav': False, 'is_in': False, 'description': 'NVIDIA designs GPUs for gaming and professional markets, and is a key player in AI.'},
 
                 # 🇮🇳 Indian Dummy Companies
-                'ITC': {'ticker': 'ITC.NS', 'name': 'ITC', 'is_fav': False, 'description': 'ITC is an Indian conglomerate with businesses in FMCG, hotels, paperboards, and packaging.'},
-                'LT': {'ticker': 'LT.NS', 'name': 'Larsen & Toubro', 'is_fav': False, 'description': 'L&T is a major Indian multinational in engineering, construction, and manufacturing.'},
-                'BAJFINANCE': {'ticker': 'BAJFINANCE.NS', 'name': 'Bajaj Finance', 'is_fav': False, 'description': 'Bajaj Finance provides a range of financial services including loans, insurance, and investment products.'}
+                'ITC': {'ticker': 'ITC.NS', 'name': 'ITC', 'is_fav': False, 'is_in': True, 'description': 'ITC is an Indian conglomerate with businesses in FMCG, hotels, paperboards, and packaging.'},
+                'LT': {'ticker': 'LT.NS', 'name': 'Larsen & Toubro', 'is_fav': False, 'is_in': True, 'description': 'L&T is a major Indian multinational in engineering, construction, and manufacturing.'},
+                'BAJFINANCE': {'ticker': 'BAJFINANCE.NS', 'name': 'Bajaj Finance', 'is_fav': False, 'is_in': True, 'description': 'Bajaj Finance provides a range of financial services including loans, insurance, and investment products.'}
             }
+
 
             # Update 'is_fav' for each company based on user's favourites
             for company in companies.values():
@@ -714,17 +716,17 @@ def search(request):
             return JsonResponse({'error': 'Search term is required'}, status=400)
 
         companies = {
-        'META': {'ticker': 'META', 'name': 'Meta',  'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.'},
-        'TSLA': {'ticker': 'TSLA', 'name': 'Tesla',  'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.'},
-        'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft', 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.'},
-        'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services',  'description': 'TCS is a leading global IT services and consulting company from India.'},
-        'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys',  'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.'},
-        'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank',  'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.'},
-        'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries',  'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.'},
-        'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro',  'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.'},
-        'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever',  'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.'},
-
+            'META': {'ticker': 'META', 'name': 'Meta', 'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.', 'is_in': False},
+            'TSLA': {'ticker': 'TSLA', 'name': 'Tesla', 'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.', 'is_in': False},
+            'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft', 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.', 'is_in': False},
+            'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services', 'description': 'TCS is a leading global IT services and consulting company from India.', 'is_in': True},
+            'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys', 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.', 'is_in': True},
+            'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.', 'is_in': True},
+            'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries', 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.', 'is_in': True},
+            'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro', 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.', 'is_in': True},
+            'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever', 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.', 'is_in': True},
         }
+
 
         # Perform the search
         results = [
@@ -1046,6 +1048,25 @@ def toggle_favourite(request):
             else:
                 favourite.objects.create(user=viewer, company_name=company_name)
                 return JsonResponse({'message': 'Company added to favourites', 'is_favourite': True}, status=200)
+
+        except Viewer.DoesNotExist:
+            return JsonResponse({'error': 'Viewer not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+def get_favourites(request):
+    if request.method == 'GET':
+        try:
+            viewer_id = request.GET.get('viewer_id')
+            if not viewer_id:
+                return JsonResponse({'error': 'Viewer ID is required'}, status=400)
+
+            viewer = Viewer.objects.get(viewer_id=viewer_id)
+            favourites = favourite.objects.filter(user=viewer).values_list('company_name', flat=True)
+
+            return JsonResponse({'favourites': list(favourites)}, status=200)
 
         except Viewer.DoesNotExist:
             return JsonResponse({'error': 'Viewer not found'}, status=404)

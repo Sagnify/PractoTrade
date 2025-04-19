@@ -1027,3 +1027,22 @@ def toggle_favourite(request):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+def get_favourites(request):
+    if request.method == 'GET':
+        try:
+            viewer_id = request.GET.get('viewer_id')
+            if not viewer_id:
+                return JsonResponse({'error': 'Viewer ID is required'}, status=400)
+
+            viewer = Viewer.objects.get(viewer_id=viewer_id)
+            favourites = favourite.objects.filter(user=viewer).values_list('company_name', flat=True)
+
+            return JsonResponse({'favourites': list(favourites)}, status=200)
+
+        except Viewer.DoesNotExist:
+            return JsonResponse({'error': 'Viewer not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)

@@ -166,19 +166,46 @@ CELERY_RESULT_BACKEND = 'redis://default:OKmsmzf8rASGhRsmMdx3OJX3SVPWydMo@redis-
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
+CELERY_REDIS_BACKEND_OPTIONS = {
+    'key_prefix': 'celery_results_'
+}
 
+
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": "redis://127.0.0.1:6379",
+#         "OPTIONS": {
+#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#         },
+#         "KEY_PREFIX": "stockapi",
+#     }
+# }
+
+# # Cache timeouts (in seconds)
+# CACHE_TIMEOUT_SHORT = 60 * 5  # 5 minutes for real-time data
+# CACHE_TIMEOUT_MEDIUM = 60 * 60  # 1 hour for predictions
+# CACHE_TIMEOUT_LONG = 60 * 60 * 6  # 6 hours for less volatile data
+
+
+
+# Cache configuration
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": "redis://default:OKmsmzf8rASGhRsmMdx3OJX3SVPWydMo@redis-11805.crce182.ap-south-1-1.ec2.redns.redis-cloud.com:11805/0",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "IGNORE_EXCEPTIONS": True,
         },
-        "KEY_PREFIX": "stockapi",
+        "KEY_PREFIX": "stock_cache",
     }
 }
 
-# Cache timeouts (in seconds)
-CACHE_TIMEOUT_SHORT = 60 * 5  # 5 minutes for real-time data
-CACHE_TIMEOUT_MEDIUM = 60 * 60  # 1 hour for predictions
-CACHE_TIMEOUT_LONG = 60 * 60 * 6  # 6 hours for less volatile data
+# Cache timeout constants
+CACHE_TIMEOUT_SHORT = 60 * 5       # 5 minutes for real-time data
+CACHE_TIMEOUT_MEDIUM = 60 * 60     # 1 hour for predictions
+CACHE_TIMEOUT_LONG = 60 * 60 * 6   # 6 hours for less volatile data
+# DEFAULT_CACHE_TIMEOUT = CACHE_TIMEOUT_MEDIUM  # Default fallback

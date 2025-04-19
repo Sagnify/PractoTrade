@@ -28,8 +28,21 @@ from statsmodels.tsa.arima.model import ARIMA
 from django.views.decorators.cache import cache_page
 from django.core.cache import cache
 from stocksentiment.settings import CACHE_TIMEOUT_MEDIUM, CACHE_TIMEOUT_LONG, CACHE_TIMEOUT_SHORT
-
-
+import uuid
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password, check_password
+from django.contrib.auth import login
+from .models import Viewer
+import yfinance as yf
+import plotly.graph_objects as go
+import pandas as pd
+import json
+import traceback
+from plotly.utils import PlotlyJSONEncoder
+from django.http import JsonResponse
+from django.shortcuts import render
 
 company_tickers = [
     'META',         # Meta
@@ -484,14 +497,7 @@ def stock_chart_api(request):  # sourcery skip: low-code-quality
     
     Returns a JSON response with the plotly chart data.
     """
-    import yfinance as yf
-    import plotly.graph_objects as go
-    import pandas as pd
-    import json
-    import traceback
-    from plotly.utils import PlotlyJSONEncoder
-    from django.http import JsonResponse
-    from django.shortcuts import render
+
     
     # Get query parameters
     company = request.GET.get('company', 'TCS.NS')
@@ -896,11 +902,38 @@ def company_poll_api(request, company_name):
 #     'HINDUNILVR.NS', 'AMZN', 'GOOGL', 'NVDA', 'ITC.NS', 'LT', 'BAJFINANCE'
 # ]
 
+# @csrf_exempt
+# def all_company_news(request):
+#     all_articles = []
+
+#     for company in COMPANY_LIST:
+#         rss_url = f"https://news.google.com/rss/search?q={company}"
+#         feed = feedparser.parse(rss_url)
+#         articles = [
+#             {
+#                 'company': company,
+#                 'title': entry.title,
+#                 'url': entry.link
+#             }
+#             for entry in feed.entries[:10]
+#         ]
+#         all_articles.extend(articles)
+
+#     return JsonResponse({'news': all_articles}, safe=False)
+
+
+
 @csrf_exempt
 @require_GET
 def all_company_news(request):
-    all_articles = []
 
+    cache_key = "all_company_news"
+    cached_news = cache.get(cache_key)
+    
+    if cached_news:
+        return JsonResponse({'news': cached_news}, safe=False)
+    
+    all_articles = []
     for company in COMPANY_LIST:
         rss_url = f"https://news.google.com/rss/search?q={company}"
         feed = feedparser.parse(rss_url)
@@ -913,17 +946,12 @@ def all_company_news(request):
             for entry in feed.entries[:10]
         ]
         all_articles.extend(articles)
-
+    
+    cache.set(cache_key, all_articles, timeout=CACHE_TIMEOUT_MEDIUM)
     return JsonResponse({'news': all_articles}, safe=False)
 
 
-import uuid
-import json
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.models import User
-from django.contrib.auth.hashers import make_password, check_password
-from django.contrib.auth import login
-from .models import Viewer
+
 
 # --- SIGNUP VIEW ---
 @csrf_exempt

@@ -32,4 +32,6 @@ urlpatterns = [
     path('api/signup/', cv.signup_view, name='signup'),
     path('api/login/', cv.login_view, name='login'),
     path('api/search/', cv.search, name='search'), # type: ignore
+    path('api/favourites/', cv.favourites, name='favourite_stocks'), # type: ignore
+    path('api/favourites/toggle/', cv.toggle_favourite, name='toggle_favourite'),
 ]

@@ -85,6 +85,11 @@ class Viewer(models.Model):
     def __str__(self):
         return self.username
 
+class favourite(models.Model):
+    user = models.ForeignKey(Viewer, on_delete=models.CASCADE)
+    company_name = models.CharField(max_length=100)
 
+    def __str__(self):
+        return f"{self.user.username} - {self.company_name}"
 
 

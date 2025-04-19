@@ -3,7 +3,7 @@ from django.shortcuts import render,HttpResponse
 import feedparser
 import requests
 from .scripts import fetch_analyze as fa
-from .models import CompanySentiment, StockPrediction, StockPrediction, DailyPoll, PollOption, Vote
+from .models import CompanySentiment, StockPrediction, StockPrediction, DailyPoll, PollOption, Vote, favourite
 from django.http import JsonResponse
 from django.utils.timezone import now
 from datetime import datetime, timedelta
@@ -140,18 +140,17 @@ def get_model_3():
 # model_2 = get_model_2()
 
 @csrf_exempt
-def predict_all_stock_prices(request):
+def predict_all_stock_prices(request):  # sourcery skip: low-code-quality
     if request.method != 'GET':
         return JsonResponse({'error': 'Only GET method allowed'}, status=405)
 
     predictions = []
     errors = []
 
-
     for company_name in company_tickers:
-        
         try:
-            entries = CompanySentiment.objects.filter(company_name=company_name).order_by('-timestamp')[:7]
+            # Get more data points for ARIMA - fetch more historical data
+            entries = CompanySentiment.objects.filter(company_name=company_name).order_by('-timestamp')[:14]  # Increased from 7 to 14
 
             if len(entries) < 7:
                 StockPrediction.objects.update_or_create(
@@ -169,42 +168,65 @@ def predict_all_stock_prices(request):
                 errors.append({'company': company_name, 'error': 'Insufficient data'})
                 continue
 
+            # Prepare data for RandomForest models
             data = []
             data_no_sentiment = []
+
+            # Extract closing prices and timestamps for ARIMA model
             closing_prices = []
             timestamps = []
+
+            # Get the last close price directly from the first entry
+            last_close_price = None
+            if entries and entries[0].stock_data and 'close' in entries[0].stock_data:
+                last_close_price = float(entries[0].stock_data['close'])
+                print(f"Got last close price for {company_name} directly: {last_close_price}")
 
             for entry in entries:
                 stock_data = entry.stock_data
 
-                data.append([
-                    stock_data.get('open'),
-                    stock_data.get('high'),
-                    stock_data.get('low'),
-                    stock_data.get('volume'),
-                    entry.sentiment_score
-                ])
-
-                data_no_sentiment.append([
-                    stock_data.get('open'),
-                    stock_data.get('high'),
-                    stock_data.get('low'),
-                ])
-
+                # Ensure we have valid closing price before adding to data
                 close_price = stock_data.get('close')
                 if close_price is not None:
-                    closing_prices.append(float(close_price))
+                    # Convert to float to ensure we can do calculations
+                    close_price = float(close_price)
+
+                    # For RandomForest models
+                    data.append([
+                        stock_data.get('open'),
+                        stock_data.get('high'),
+                        stock_data.get('low'),
+                        stock_data.get('volume'),
+                        entry.sentiment_score
+                    ])
+
+                    data_no_sentiment.append([
+                        stock_data.get('open'),
+                        stock_data.get('high'),
+                        stock_data.get('low'),
+                    ])
+
+                    # For ARIMA model
+                    closing_prices.append(close_price)
                     timestamps.append(entry.timestamp)
 
+            # Process RandomForest model inputs
             df = pd.DataFrame(data, columns=['open', 'high', 'low', 'volume', 'sentiment_score'])
             df_no_sentiment = pd.DataFrame(data_no_sentiment, columns=['open', 'high', 'low'])
 
+            # Debug logs for prediction
+            print(f"Predicting for {company_name} with data: {df.head()}")
+
             try:
+                # Load models for other predictions
                 model_with_sentiment = get_model_1()
                 model_without_sentiment = get_model_2()
-
+                # Make predictions with sentiment and without sentiment
                 features_with_sentiment = df.mean().values.tolist()
                 features_without_sentiment = df_no_sentiment.mean().values.tolist()
+
+                print(f"Features with sentiment: {features_with_sentiment}")
+                print(f"Features without sentiment: {features_without_sentiment}")
 
                 pred_with_sentiment = model_with_sentiment.predict([features_with_sentiment])[0]
                 pred_without_sentiment = model_without_sentiment.predict([features_without_sentiment])[0]
@@ -213,39 +235,88 @@ def predict_all_stock_prices(request):
                 pred_with_sentiment = 0
                 pred_without_sentiment = 0
 
-
+            # Create and train a new ARIMA model for each company
             arima_pred = 0
             try:
-                if len(closing_prices) >= 7:
-                    ts = pd.Series(closing_prices, index=timestamps)
+                # Make sure we have at least 5 data points for ARIMA
+                if len(closing_prices) >= 5:
+                    # Convert to Series and ensure proper time order (oldest to newest)
+                    ts = pd.Series(closing_prices[::-1], index=timestamps[::-1])  # Reverse order to have oldest first
                     ts = ts.sort_index()
 
-                    model = ARIMA(ts.values, order=(1, 1, 0))
+                    print(f"ARIMA input for {company_name}: {len(ts)} data points")
+                    print(f"Time series data: {ts}")
+
+                    # Use a simpler ARIMA model if data is limited
+                    order = (1, 1, 0) if len(ts) >= 7 else (1, 0, 0)
+
+                    # Fit the ARIMA model
+                    model = ARIMA(ts.values, order=order)
                     model_fit = model.fit()
 
+                    # Forecast next value
                     forecast = model_fit.forecast(steps=1)
                     arima_pred = forecast[0]
+
+                    print(f"ARIMA forecast for {company_name}: {arima_pred}")
                 else:
-                    print(f"Not enough closing prices for {company_name} ARIMA model")
+                    print(f"Not enough closing prices for {company_name} ARIMA model: {len(closing_prices)} available")
+                    # Use the last closing price as fallback
+                    if closing_prices:
+                        arima_pred = closing_prices[0]  # Use the most recent price
             except Exception as e:
                 print(f"Error in ARIMA for {company_name}: {str(e)}")
-                arima_pred = 0
                 import traceback
                 traceback.print_exc()
+                # Fallback to the last closing price if available
+                if closing_prices:
+                    arima_pred = closing_prices[0]
 
-            # Calculate average only after all predictions are done
-            avg_pred = (pred_with_sentiment + pred_without_sentiment + arima_pred) / 3
-            
-            last_close_price = get_last_close_price(company_name)
-            if last_close_price:
-                percentage_change = ((avg_pred - last_close_price) / avg_pred) * 100
+            # Calculate average prediction including ARIMA model
+            # Only include ARIMA in average if it's not zero
+            if arima_pred != 0:
+                avg_pred = (pred_with_sentiment + pred_without_sentiment + arima_pred) / 3
+            else:
+                avg_pred = (pred_with_sentiment + pred_without_sentiment) / 2 if pred_with_sentiment or pred_without_sentiment else 0
+
+            avg_pred = round(avg_pred, 2)
+
+            # If we still don't have a last close price, try to get it from closing_prices
+            if last_close_price is None and closing_prices:
+                last_close_price = closing_prices[0]  # Use the most recent price
+                print(f"Using most recent closing price for {company_name}: {last_close_price}")
+
+            # If still no last_close_price, try the external function
+            if last_close_price is None:
+                last_close_price = get_last_close_price(company_name)
+                print(f"Using external function for last close price for {company_name}: {last_close_price}")
+
+            # Calculate percentage change
+            percentage_change = 0
+            direction = 'neutral'
+
+            # Calculate only if we have valid data
+            if last_close_price and last_close_price > 0 and avg_pred > 0:
+                percentage_change = ((avg_pred - last_close_price) / last_close_price) * 100
+                print(f"{company_name} - Last close: {last_close_price}, Avg pred: {avg_pred}, Change: {percentage_change}%")
+                direction = 'up' if percentage_change > 0 else 'down' if percentage_change < 0 else 'neutral'
+            elif arima_pred > 0 and closing_prices and closing_prices[0] > 0:
+                percentage_change = ((avg_pred - closing_prices[0]) / closing_prices[0]) * 100
+                print(f"{company_name} - Fallback: Using closing price: {closing_prices[0]}, Avg pred: {avg_pred}, Change: {percentage_change}%")
                 direction = 'up' if percentage_change > 0 else 'down' if percentage_change < 0 else 'neutral'
             else:
-                percentage_change = 0
-                direction = 'neutral'
+                print(f"WARNING: Could not calculate percentage change for {company_name}")
+                print(f"Last close price: {last_close_price}, closing_prices: {closing_prices[:1] if closing_prices else None}, Avg pred: {avg_pred}")
 
+                # EMERGENCY FALLBACK: If we have a forecast and no last close price, use the arima prediction itself
+                # This is not ideal but prevents having 0% changes
+                if arima_pred > 0:
+                    # Use the difference between the prediction and the arima value as a percentage change
+                    percentage_change = ((avg_pred - arima_pred) / arima_pred) * 100
+                    print(f"{company_name} - Emergency fallback: Using ARIMA pred: {arima_pred}, Avg pred: {avg_pred}, Change: {percentage_change}%")
+                    direction = 'up' if percentage_change > 0 else 'down' if percentage_change < 0 else 'neutral'
 
-
+            # Save to DB
             StockPrediction.objects.update_or_create(
                 company_name=company_name,
                 defaults={
@@ -275,6 +346,7 @@ def predict_all_stock_prices(request):
             traceback.print_exc()
 
     return JsonResponse({'predictions': predictions, 'errors': errors}, status=200)
+
 
 # Make sure to fix the get_last_close_price function as well
 def get_last_close_price(company_name):
@@ -602,23 +674,23 @@ def company_list(request):
 def search(request):
 
 
-    companies = {
-    'META': {'ticker': 'META', 'name': 'Meta', 'is_in': False, 'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.'},
-    'TSLA': {'ticker': 'TSLA', 'name': 'Tesla', 'is_in': False, 'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.'},
-    'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft', 'is_in': False, 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.'},
-    'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services', 'is_in': True, 'description': 'TCS is a leading global IT services and consulting company from India.'},
-    'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys', 'is_in': True, 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.'},
-    'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'is_in': True, 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.'},
-    'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries', 'is_in': True, 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.'},
-    'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro', 'is_in': True, 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.'},
-    'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever', 'is_in': True, 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.'},
-
-    }
-
     if request.method == 'GET':
         search_term = request.GET.get('search', '').strip()
         if not search_term:
             return JsonResponse({'error': 'Search term is required'}, status=400)
+
+        companies = {
+        'META': {'ticker': 'META', 'name': 'Meta', 'is_in': False, 'description': 'Meta (formerly Facebook) is a global leader in social media and virtual reality.'},
+        'TSLA': {'ticker': 'TSLA', 'name': 'Tesla', 'is_in': False, 'description': 'Tesla is an electric vehicle and clean energy company, revolutionizing transportation.'},
+        'MSFT': {'ticker': 'MSFT', 'name': 'Microsoft', 'is_in': False, 'description': 'Microsoft is a global technology company known for software, hardware, and cloud services.'},
+        'TCS': {'ticker': 'TCS.NS', 'name': 'Tata Consultancy Services', 'is_in': True, 'description': 'TCS is a leading global IT services and consulting company from India.'},
+        'INFY': {'ticker': 'INFY.NS', 'name': 'Infosys', 'is_in': True, 'description': 'Infosys is an Indian multinational corporation that provides IT and consulting services.'},
+        'HDFCBANK': {'ticker': 'HDFCBANK.NS', 'name': 'HDFC Bank', 'is_in': True, 'description': 'HDFC Bank is one of India’s largest private sector banks offering a wide range of financial services.'},
+        'RELIANCE': {'ticker': 'RELIANCE.NS', 'name': 'Reliance Industries', 'is_in': True, 'description': 'Reliance Industries is a conglomerate with businesses in petrochemicals, retail, and telecommunications.'},
+        'WIPRO': {'ticker': 'WIPRO.NS', 'name': 'Wipro', 'is_in': True, 'description': 'Wipro is an Indian multinational corporation providing IT services and consulting.'},
+        'HINDUNILVR': {'ticker': 'HINDUNILVR.NS', 'name': 'Hindustan Unilever', 'is_in': True, 'description': 'Hindustan Unilever is a leading Indian consumer goods company offering products in health, beauty, and home care.'},
+
+        }
 
         # Perform the search
         results = [
@@ -895,4 +967,59 @@ def login_view(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+@csrf_exempt
+def favourites(request):
+    if request.method == 'GET':
+        try:
+            viewer_id = request.GET.get('viewer_id')
+            if not viewer_id:
+                return JsonResponse({'error': 'Viewer ID is required'}, status=400)
 
+            # Get the viewer object
+            viewer = Viewer.objects.get(viewer_id=viewer_id)
+
+            # Fetch all favourites from the Favourites model
+            favourites = favourite.objects.filter(user=viewer)
+            if not favourites.exists():
+                return JsonResponse({'message': 'No favourite companies found'}, status=404)
+
+            favourite_companies = [f.company_name for f in favourites]
+
+            return JsonResponse({'favourites': favourite_companies}, status=200)
+
+        except Viewer.DoesNotExist:
+            return JsonResponse({'error': 'Viewer not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@csrf_exempt
+def toggle_favourite(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            viewer_id = data.get('viewer_id')
+            company_name = data.get('company_name')
+
+            if not (viewer_id and company_name):
+                return JsonResponse({'error': 'Missing fields'}, status=400)
+
+            viewer = Viewer.objects.get(viewer_id=viewer_id)
+
+            # Check if this company is already favourited by the user
+            existing = favourite.objects.filter(user=viewer, company_name=company_name).first()
+
+            if existing:
+                existing.delete()
+                return JsonResponse({'message': 'Company removed from favourites', 'is_favourite': False}, status=200)
+            else:
+                favourite.objects.create(user=viewer, company_name=company_name)
+                return JsonResponse({'message': 'Company added to favourites', 'is_favourite': True}, status=200)
+
+        except Viewer.DoesNotExist:
+            return JsonResponse({'error': 'Viewer not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)

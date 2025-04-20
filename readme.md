@@ -1,4 +1,6 @@
-<img src="https://raw.githubusercontent.com/RaunakDiesFromCode/PractoTrade-app/main/public/practo.png" alt="drawing" width="200"/>
+<div align="center">
+  <img src="https://raw.githubusercontent.com/RaunakDiesFromCode/PractoTrade-app/main/public/practo.png" alt="drawing" width="200"/>
+</div>
 
 # 📉 PractoTrade — Sentiment-Driven Stock Price Predictor
 
@@ -6,7 +8,9 @@ A hackathon project that forecasts the **next-day closing prices** of Indian blu
 
 ---
 
-<img src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeGN6Z2x2cWQzNnlvOG9qaXRieXhiNTI3eTk5b3BkaXJvc3d1b254byZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NwcF4xHOdoFVUP1SiD/giphy.gif" alt="stock-details"/>
+<div align="center">
+  <img src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExeGN6Z2x2cWQzNnlvOG9qaXRieXhiNTI3eTk5b3BkaXJvc3d1b254byZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NwcF4xHOdoFVUP1SiD/giphy.gif" alt="stock-details"/>
+</div>
 
 ---
 
@@ -68,9 +72,13 @@ This helps collect user sentiment data for each company.
 
 ### 📊 Backend Workflow
 
-<img src="https://i.ibb.co/2YK1SCBd/Sentiment-Algo.jpg" alt="Sentiment-Algo" />
+<div align="center">
+  <img src="https://i.ibb.co/2YK1SCBd/Sentiment-Algo.jpg" alt="Sentiment-Algo" />
+</div>
 
-<img src="https://i.ibb.co/JFG1Th5F/prediction-Algo.jpg" alt="prediction-Algo" />
+<div align="center">
+  <img src="https://i.ibb.co/JFG1Th5F/prediction-Algo.jpg" alt="prediction-Algo" />
+</div>
 
 ---
 
@@ -133,8 +141,8 @@ This helps collect user sentiment data for each company.
 - Latest sentiment score
 
 ### Execution:
-1. Model 1: With sentiment
-2. Model 2: Without sentiment
+1. Model 1: With sentiment  
+2. Model 2: Without sentiment  
 3. Model 3: ARIMA
 
 ### Final Output:
@@ -155,9 +163,13 @@ This helps collect user sentiment data for each company.
 
 ## 🖼️ UI Screens
 
-<img src="https://i.ibb.co/Xfgx163Y/homePage.jpg" alt="homePage" />
+<div align="center">
+  <img src="https://i.ibb.co/Xfgx163Y/homePage.jpg" alt="homePage" />
+</div>
 
-<img src="https://i.ibb.co/7xGMNtvC/stock-Details.jpg" alt="stock-Details" />
+<div align="center">
+  <img src="https://i.ibb.co/7xGMNtvC/stock-Details.jpg" alt="stock-Details" />
+</div>
 
 ---
 
@@ -228,12 +240,12 @@ Predicted Close (without Sentiment): ₹3590.10
 
 ## ✨ Features
 
-- ⏱️ Automated data fetching every 6 hours
-- 🔍 Sentiment-powered predictions
-- 📊 Dual-model prediction logic
-- 📈 Company trend tracking
-- 💻 Clean frontend with poll UI
-- 🗳️ Community-driven sentiment polls
+- ⏱️ Automated data fetching every 6 hours  
+- 🔍 Sentiment-powered predictions  
+- 📊 Dual-model prediction logic  
+- 📈 Company trend tracking  
+- 💻 Clean frontend with poll UI  
+- 🗳️ Community-driven sentiment polls  
 
 ---
 
@@ -256,10 +268,3 @@ Pull requests, feature ideas, and issues are welcome. Fork the repo, branch out,
 ---
 
 > 💡 *Made with ❤️ at Hackathons — PractoTrade is not financial advice*
-
-
-
-
-
-
-

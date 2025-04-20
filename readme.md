@@ -1,6 +1,12 @@
+<img src="https://raw.githubusercontent.com/RaunakDiesFromCode/PractoTrade-app/main/public/practo.png" alt="drawing" width="200"/>
+
 # 📉 PractoTrade — Sentiment-Driven Stock Price Predictor
 
 A hackathon project that forecasts the **next-day closing prices** of Indian blue-chip stocks by combining **real-time sentiment analysis** with **historical market data** using dual regression models.
+
+---
+
+<img src="https://i.ibb.co/GfC92Wb4/Screen-Recording-2025-04-20-034309-1-1-1.gif" alt="stock-Details" />
 
 ---
 
@@ -13,15 +19,13 @@ A hackathon project that forecasts the **next-day closing prices** of Indian blu
 ## 🛠️ Tech Stack
 
 - **Backend**: Django (App name: `core`)
-- **Frontend**: NEXT JS + ShadCN (⚡ polished and production-ready)
+- **Frontend**: Next.js + ShadCN (⚡ polished and production-ready)
 - **Scheduler**: Celery + Redis (runs automatic sentiment polling every 6 hours)
 - **Machine Learning**: Scikit-learn (2 custom regression models)
 - **NLP**: VADER via NLTK for sentiment scoring
 - **Data Source**: Yahoo Finance API, Reddit, Google News scraping
 - **Database**: PostgreSQL
 - **Caching**: django-redis
-
-
 
 ---
 
@@ -62,106 +66,102 @@ This helps collect user sentiment data for each company.
 
 ---
 
-## 📊 Machine Learning Models
+### 📊 Backend Workflow
+
+<img src="https://i.ibb.co/2YK1SCBd/Sentiment-Algo.jpg" alt="Sentiment-Algo" />
+
+<img src="https://i.ibb.co/JFG1Th5F/prediction-Algo.jpg" alt="prediction-Algo" />
+
+---
+
+## 🧠 Machine Learning Models
 
 ### Model 1: Stock Prediction without Sentiment Analysis
 
-#### **Inputs**:
-- **Past 7 days' stock data**:
-  - **Open**, **High**, **Low**, **Close**, and **Volume** for the previous 7 trading days. These features capture the key market dynamics such as trends, volatility, and trading activity.
+#### Inputs:
+- Past 7 days of stock data (Open, High, Low, Close, Volume)
 
-#### **Model Type**:
-- **Linear Regression**: A basic linear regression model is employed to model the relationship between historical stock data and the next day's closing price. The model assumes a linear correlation between the input features and the target variable.
+#### Model:
+- **Linear Regression**
 
-#### **Target**:
-- **Next-day closing price**: The model predicts the closing price for the next trading day based on the patterns observed from the past week's stock data.
+#### Output:
+- Next-day closing price
 
 ---
 
 ### Model 2: Stock Prediction with Sentiment Analysis
 
-#### **Inputs**:
-- **Past 7 days' stock data**:
-  - Same as Model 1, using the **Open**, **High**, **Low**, **Close**, and **Volume** values for the last 7 trading days.
-  
-- **Latest sentiment score**:
-  - A sentiment score derived from various sources such as news articles, social media, and financial forums. This score quantifies the market's sentiment (positive, neutral, or negative) towards the stock, providing an additional layer of insight into market psychology and external influences on stock price movement.
+#### Inputs:
+- Same past 7 days' stock data
+- Latest sentiment score (aggregated from news and Reddit)
 
-#### **Model Type**:
-- **Linear Regression** (with potential extensions):
-  - The model combines both historical stock data and sentiment scores using linear regression. However, the architecture is designed to be extended to more advanced models, such as:
-    - **LSTM (Long Short-Term Memory)**: A deep learning technique for time series forecasting that captures temporal dependencies and long-term trends in stock prices.
-    - **XGBoost**: A gradient-boosted tree model known for its efficiency in regression tasks, capable of handling complex, non-linear relationships between input features and the target.
+#### Model:
+- **Linear Regression** with future scope for **LSTM** or **XGBoost**
 
-#### **Target**:
-- **Next-day closing price**: The model predicts the next-day closing price, incorporating both historical stock data and the sentiment score to improve prediction accuracy.
+#### Output:
+- Next-day closing price
 
 ---
 
-### Post-Processing with Sentiment Analysis Using VADER
+### Model 3: ARIMA
 
-The sentiment analysis process is an essential part of the prediction pipeline. Here's how it works:
-
-#### **Data Collection**:
-- **Reddit Posts**: The latest 20 Reddit posts related to each company are fetched.
-- **News Articles**: The latest 10 news articles related to each company are fetched from various news sources.
-
-#### **Sentiment Analysis**:
-- Each Reddit post and news article is analyzed for sentiment using **VADER (Valence Aware Dictionary and sEntiment Reasoner)**, a sentiment analysis tool designed for social media and textual data.
-  - **Positive Sentiment**: The article/post expresses optimism or positive outlook towards the company.
-  - **Negative Sentiment**: The article/post expresses pessimism or a negative outlook.
-  - **Neutral Sentiment**: The sentiment is balanced or neutral.
-
-#### **Sentiment Aggregation**:
-- After analyzing each post and article, a **total aggregated sentiment score** is calculated. This score represents the overall market sentiment towards the company at the time of the analysis.
-  - The aggregation involves averaging the sentiment scores of the 20 Reddit posts and 10 news articles for each company.
-  - The resulting score reflects the collective sentiment (positive, neutral, or negative) toward the company at that specific point in time.
-
-#### **Scheduled Analysis**:
-- The sentiment analysis process is repeated at regular intervals:
-  - Every **6 hours**, the system fetches the latest posts and articles, performs sentiment analysis, and updates the sentiment score for the company.
+- Statistical approach for time series forecasting using historical stock data.
 
 ---
 
-### Prediction Process
+## 📝 Sentiment Analysis Using VADER
 
-After the sentiment score is updated, the prediction models are used to forecast the next day's closing price based on both the sentiment data and historical stock data.
+### Data Collection:
+- 20 Reddit posts
+- 10 News articles
 
-#### **Data Input**:
-- For each day, the model uses:
-  - The **historical stock data** from the last 7 days (Open, High, Low, Close, Volume).
-  - The **aggregated sentiment score** from the latest analysis of Reddit posts and news articles.
+### Sentiment Analysis:
+- Scored as Positive / Neutral / Negative using VADER
 
-#### **Model Execution**:
+### Aggregation:
+- Sentiment scores are averaged across all sources for each company
 
-1. **Model 1** (with sentiment) incorporates both the historical stock data and the sentiment score for a more nuanced prediction.
-
-2. **Model 2** (without sentiment) processes the historical stock data to predict the next day's closing price.
-
-3. **Model 3** (ARIMA Model) processes historical stock data using traditional statistical methods to predict the next day's closing price 
-
-#### **Final Prediction**:
-
-- The final prediction is an **aggregate of the 3 models' outputs** (with and without sentiment, and ARIMA model). This combined prediction aims to provide a more accurate next-day closing price by leveraging both quantitative market data and qualitative sentiment insights.
+### Scheduler:
+- Runs every 6 hours to update sentiment data
 
 ---
 
-### Final Prediction Strategy
+## 🔮 Prediction Process
 
-The final predicted next-day closing price is typically an aggregate of the predictions from both models:
+### Inputs:
+- Past 7 days of stock data
+- Latest sentiment score
 
-- **Model 1**: Prediction enhanced with sentiment analysis.
+### Execution:
+1. Model 1: With sentiment
+2. Model 2: Without sentiment
+3. Model 3: ARIMA
 
-- **Model 2**: Prediction based on historical stock data.
-
-- **Model 3**: Prediction using traditional statistical analysis 
-
-By combining these predictions, the system aims to leverage both quantitative (price and volume) and qualitative (market sentiment) data to generate a more robust and accurate stock price forecast.
-
+### Final Output:
+- **Average of all three models** for final prediction
 
 ---
 
-## 📦 Setup Instructions
+## 🎯 Final Prediction Strategy
+
+- Combines:
+  - **Model 1**: With sentiment
+  - **Model 2**: Without sentiment
+  - **Model 3**: ARIMA
+
+> 📌 Future scope: Weighted average based on model confidence
+
+---
+
+## 🖼️ UI Screens
+
+<img src="https://i.ibb.co/Xfgx163Y/homePage.jpg" alt="homePage" />
+
+<img src="https://i.ibb.co/7xGMNtvC/stock-Details.jpg" alt="stock-Details" />
+
+---
+
+## ⚙️ Setup Instructions
 
 ### 1. Clone the Repository
 
@@ -184,31 +184,24 @@ python manage.py migrate
 python manage.py runserver
 ```
 
----
+### 4. Start Celery & Redis
 
-### 4. Run Celery & Redis
-
-**Redis**
-
+**Redis:**
 ```bash
 wsl start
 redis-server
 redis-cli
 ```
 
-**Celery**
-
+**Celery:**
 ```bash
 celery -A stocksentiment worker --loglevel=info --pool=solo
 celery -A stocksentiment beat --loglevel=info
 ```
 
+---
 
-
-
-
-
-## 📈 Sample Output
+## 🧾 Sample Output
 
 ```
 Company: Tata Consultancy Services (TCS)
@@ -219,31 +212,32 @@ Predicted Close (without Sentiment): ₹3590.10
 
 ---
 
-## 🚣 Future Scope
+## 🌱 Future Scope
 
-- 🔍 Upgrade to **FinBERT** for more accurate financial sentiment detection
-- 📊 Add real-time data visualization with interactive charts and analytics
-- 🔢 Introduce prediction **confidence intervals** and model evaluation metrics
-- 🐳 Improve containerization with Docker Compose & environment variable configs
-- 📩 Send **email/Telegram alerts** for abnormal market sentiment or prediction shifts
-- 📱 Add mobile-friendly frontend and PWA capabilities
-- ⏱️ Support for **multi-day predictions** and intraday forecasts
-- 🧠 Models retrained weekly
-- 🧮 Final prediction will be computed as a weighted average of the outputs from all three models, with weights determined by each model’s confidence or performance score.
+- Upgrade to **FinBERT** for more accurate sentiment detection
+- Add interactive charts and analytics
+- Show **confidence intervals** and model evaluation
+- Improve Dockerization
+- Add **Telegram/email alerts** for sentiment shifts
+- Support **mobile frontend** & PWA
+- Add support for **multi-day and intraday predictions**
+- Weekly model retraining
+- Use weighted model outputs based on performance
+
 ---
 
 ## ✨ Features
 
-- 🔁 **Automated Data Collection** (every 6 hours)
-- 📊 **Dual-Model Prediction** logic for reliability
-- 🧠 **NLP-Powered Sentiment Analysis** from real news/posts
-- 📉 **Company-wise Trend Tracking**
-- 💻 **Beautiful Frontend** with no-code poll UI
-- 🗳️ **Community Polling System** where users can vote daily on market sentiment per company
+- ⏱️ Automated data fetching every 6 hours
+- 🔍 Sentiment-powered predictions
+- 📊 Dual-model prediction logic
+- 📈 Company trend tracking
+- 💻 Clean frontend with poll UI
+- 🗳️ Community-driven sentiment polls
 
 ---
 
-## 📍 Focused Companies
+## 🧭 Focused Companies
 
 - Reliance, TCS, Infosys, HDFC Bank, ICICI, Wipro, Hindustan Unilever, META, TESLA
 
@@ -251,31 +245,21 @@ Predicted Close (without Sentiment): ₹3590.10
 
 ## 📄 License
 
-This project is open-source under the **MIT License**.
+Open-source under the **MIT License**
 
 ---
 
-## 🔗 Contributing
+## 🤝 Contributing
 
-PRs, Issues, and Feature Requests are welcome!\
-Just fork the repo, branch out, and submit a pull request 🙌
+Pull requests, feature ideas, and issues are welcome. Fork the repo, branch out, and raise a PR 🙌
 
 ---
 
-> 💡 *Made with ❤️ for innovation at Hackathons — PractoTrade is not financial advice*
+> 💡 *Made with ❤️ at Hackathons — PractoTrade is not financial advice*
 
 
-## Images ##
 
 
-** 
 
-<img src="https://i.ibb.co/2YK1SCBd/Sentiment-Algo.jpg" alt="Sentiment-Algo" border="0">
-
-<img src="https://i.ibb.co/JFG1Th5F/prediction-Algo.jpg" alt="prediction-Algo" border="0">
-
-<img src="https://i.ibb.co/Xfgx163Y/homePage.jpg" alt="homePage" border="0">
-
-<img src="https://i.ibb.co/7xGMNtvC/stock-Details.jpg" alt="stock-Details" border="0">
 
 

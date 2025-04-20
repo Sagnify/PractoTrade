@@ -6,7 +6,7 @@ A hackathon project that forecasts the **next-day closing prices** of Indian blu
 
 ---
 
-<img src="https://i.ibb.co/7NQPtX5r/Screen-Recording-2025-04-20-034309-1-1-1-online-video-cutter-com.gif" alt="stock-Details" />
+<img src="https://i.ibb.co/Tq271j2G/image.png" alt="stock-Details" />
 
 ---
 

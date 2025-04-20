@@ -1,3 +1,6 @@
 [submodule "frontend"]
 	path = frontend
 	url = https://github.com/RaunakDiesFromCode/PractoTrade-app.git
+[submodule "PractoTrade-app"]
+	path = PractoTrade-app
+	url = https://github.com/RaunakDiesFromCode/PractoTrade-app.git

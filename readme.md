@@ -19,6 +19,7 @@ A hackathon project that forecasts the **next-day closing prices** of Indian blu
 - **NLP**: VADER via NLTK for sentiment scoring
 - **Data Source**: Yahoo Finance API, Reddit, Google News scraping
 - **Database**: PostgreSQL
+- **Caching**: django-redis
 
 
 
@@ -132,19 +133,28 @@ After the sentiment score is updated, the prediction models are used to forecast
   - The **aggregated sentiment score** from the latest analysis of Reddit posts and news articles.
 
 #### **Model Execution**:
-1. **Model 1** (without sentiment) processes the historical stock data to predict the next day's closing price.
-2. **Model 2** (with sentiment) incorporates both the historical stock data and the sentiment score for a more nuanced prediction.
+
+1. **Model 1** (with sentiment) incorporates both the historical stock data and the sentiment score for a more nuanced prediction.
+
+2. **Model 2** (without sentiment) processes the historical stock data to predict the next day's closing price.
+
+3. **Model 3** (ARIMA Model) processes historical stock data using traditional statistical methods to predict the next day's closing price 
 
 #### **Final Prediction**:
-- The final prediction is an **aggregate of both models' outputs** (with and without sentiment). This combined prediction aims to provide a more accurate next-day closing price by leveraging both quantitative market data and qualitative sentiment insights.
+
+- The final prediction is an **aggregate of the 3 models' outputs** (with and without sentiment, and ARIMA model). This combined prediction aims to provide a more accurate next-day closing price by leveraging both quantitative market data and qualitative sentiment insights.
 
 ---
 
 ### Final Prediction Strategy
 
 The final predicted next-day closing price is typically an aggregate of the predictions from both models:
-- **Model 1**: Prediction based on historical stock data.
-- **Model 2**: Prediction enhanced with sentiment analysis.
+
+- **Model 1**: Prediction enhanced with sentiment analysis.
+
+- **Model 2**: Prediction based on historical stock data.
+
+- **Model 3**: Prediction using traditional statistical analysis 
 
 By combining these predictions, the system aims to leverage both quantitative (price and volume) and qualitative (market sentiment) data to generate a more robust and accurate stock price forecast.
 
@@ -176,6 +186,28 @@ python manage.py runserver
 
 ---
 
+### 4. Run Celery & Redis
+
+**Redis**
+
+```bash
+wsl start
+redis-server
+redis-cli
+```
+
+**Celery**
+
+```bash
+celery -A stocksentiment worker --loglevel=info --pool=solo
+celery -A stocksentiment beat --loglevel=info
+```
+
+
+
+
+
+
 ## 📈 Sample Output
 
 ```
@@ -196,8 +228,8 @@ Predicted Close (without Sentiment): ₹3590.10
 - 📩 Send **email/Telegram alerts** for abnormal market sentiment or prediction shifts
 - 📱 Add mobile-friendly frontend and PWA capabilities
 - ⏱️ Support for **multi-day predictions** and intraday forecasts
-
-
+- 🧠 Models retrained weekly
+- 🧮 Final prediction will be computed as a weighted average of the outputs from all three models, with weights determined by each model’s confidence or performance score.
 ---
 
 ## ✨ Features
@@ -231,4 +263,19 @@ Just fork the repo, branch out, and submit a pull request 🙌
 ---
 
 > 💡 *Made with ❤️ for innovation at Hackathons — PractoTrade is not financial advice*
+
+
+## Images ##
+
+
+** 
+
+<img src="https://i.ibb.co/2YK1SCBd/Sentiment-Algo.jpg" alt="Sentiment-Algo" border="0">
+
+<img src="https://i.ibb.co/JFG1Th5F/prediction-Algo.jpg" alt="prediction-Algo" border="0">
+
+<img src="https://i.ibb.co/Xfgx163Y/homePage.jpg" alt="homePage" border="0">
+
+<img src="https://i.ibb.co/7xGMNtvC/stock-Details.jpg" alt="stock-Details" border="0">
+
 
